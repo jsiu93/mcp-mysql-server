@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    # 配置默认的数据源
+    url: jdbc:mysql://mysql2.sqlpub.com:3307/dancelink?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: dancelink
+    password: pFJFf9pIVZJ0yz7l
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: HikariCP
+      maximum-pool-size: 10 # 连接池最大连接数
+      minimum-idle: 5 # 最小空闲连接数
+  jpa:
+    hibernate:
+      ddl-auto: update # 可以是 none、update、create、create-drop，根据需要选择
+    show-sql: true # 显示执行的 SQL 语句
+    open-in-view: false # 默认关闭，避免延迟加载相关问题
+  ai:
+    mcp:
+      server:
+        name: mcp-mysql-server
+        version: 1.0.0
+
