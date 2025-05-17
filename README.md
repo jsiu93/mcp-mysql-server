@@ -1,6 +1,6 @@
 # MCP MySQL Server
 
-一个基于 Spring Boot 的 MySQL 服务器，支持执行任意 SQL 并直接透传 MySQL 服务器的返回值。
+一个基于 Spring AI 的MCP，支持执行任意 SQL 并直接透传 MySQL 服务器的返回值。
 
 ## 环境要求
 
@@ -97,7 +97,7 @@ java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar --datasource.config=/path/t
 
 # MCP MySQL Server (English Documentation)
 
-A Spring Boot-based MySQL server that supports executing arbitrary SQL and directly transmits MySQL server responses.
+A Spring AI MCP server that supports executing arbitrary SQL and directly transmits MySQL server responses.
 
 ## Environment Requirements
 
