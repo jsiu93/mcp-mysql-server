@@ -1,9 +1,9 @@
 spring:
   datasource:
     # 配置默认的数据源
-    url: jdbc:mysql://mysql2.sqlpub.com:3307/dancelink?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
-    username: dancelink
-    password: pFJFf9pIVZJ0yz7l
+    url:
+    username:
+    password:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: HikariCP
@@ -14,6 +14,12 @@ spring:
       ddl-auto: update # 可以是 none、update、create、create-drop，根据需要选择
     show-sql: true # 显示执行的 SQL 语句
     open-in-view: false # 默认关闭，避免延迟加载相关问题
+
+apollo:
+  meta: http://10.118.223.117:51000
+  bootstrap:
+    enabled: true
+    namespaces: application,corpgovernment.multi-supplier,corpgovernment.common,corpgovernment.field-dictionary,corpgovernment.mss.BYD,corpgovernment.mss.XGJT,corpgovernment.mss.COFCO,corpgovernment.mss.SEC,corpgovernment.mss.CETC,corpgovernment.mss.CTRIP,corpgovernment.mss.DP,corpgovernment.tenant.dictionary
   ai:
     mcp:
       server:
