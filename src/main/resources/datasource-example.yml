@@ -1,0 +1,35 @@
+# 示例数据源配置文件
+# 用户可以复制此文件并根据需要修改，然后通过命令行参数指定：
+# java -jar mcp-mysql-server-0.0.1-SNAPSHOT.jar --datasource.config=/path/to/your-datasource.yml
+
+datasource:
+  # 数据源列表
+  datasources:
+    # 第一个数据源（默认）
+    db1:
+      url: jdbc:mysql://localhost:3306/db1?connectTimeout=10000&socketTimeout=10000&useUnicode=true&characterEncoding=UTF-8&useTimezone=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+      username: root
+      password: password
+      default: true  # 标记为默认数据源
+      # 以下是可选配置，用户可以不配置
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+
+    # 第二个数据源
+    db2:
+      url: jdbc:mysql://localhost:3306/db2?connectTimeout=10000&socketTimeout=10000&useUnicode=true&characterEncoding=UTF-8&useTimezone=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+      username: root
+      password: password
+      # 以下是可选配置，用户可以不配置
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 2
+
+    # 可以添加更多数据源
+    # db3:
+    #   url: jdbc:mysql://localhost:3306/db3
+    #   username: user3
+    #   password: pass3

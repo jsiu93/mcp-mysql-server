@@ -1,0 +1,39 @@
+# 默认数据源配置文件
+# 用户可以通过命令行参数 --datasource.config=<配置文件路径> 指定自定义配置文件
+# 所有数据源配置在一起，可以通过 default: true 标记默认数据源，如果没有标记则默认使用第一个
+# 用户只需要配置 url、username、password 即可，其他配置都有合理的默认值
+datasource:
+  # 数据源列表
+  datasources:
+    # 第一个数据源（默认）
+    primary:
+      url: jdbc:mysql://xxx/corpgovernment_standard?connectTimeout=10000&socketTimeout=10000&useUnicode=true&characterEncoding=UTF-8&useTimezone=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+      username: root
+      password: 'xxx'
+      # 以下是可选配置，用户可以不配置
+      default: true  # 标记为默认数据源
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        pool-name: PrimaryHikariCP
+        maximum-pool-size: 10
+        minimum-idle: 5
+
+    # 第二个数据源
+    secondary:
+      url: jdbc:mysql://xxx:3306/corpgovernment_common?connectTimeout=10000&socketTimeout=10000&useUnicode=true&characterEncoding=UTF-8&useTimezone=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+      username: root
+      password: 'xxx'
+      # 以下是可选配置，用户可以不配置
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        pool-name: SecondaryHikariCP
+        maximum-pool-size: 5
+        minimum-idle: 2
+
+    # 可以添加更多数据源
+    # third:
+    #   url: jdbc:mysql://example.com:3306/db3
+    #   username: user3
+    #   password: pass3
+    #   # 可选配置
+    #   driver-class-name: com.mysql.cj.jdbc.Driver
