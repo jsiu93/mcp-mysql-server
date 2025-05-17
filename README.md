@@ -11,7 +11,18 @@
 ## MCP JSON 配置
 
 ```json
-// 此处将由用户补充 MCP 的 JSON 配置
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+      ],
+      "env": {}
+    }
+  }
+}
 ```
 
 ## 功能特点
@@ -64,22 +75,6 @@ datasource:
 
 ## 使用方法
 
-### 程序中使用
-
-```java
-// 使用默认数据源执行 SQL
-String result = mysqlOptionService.executeSql("SELECT * FROM users");
-
-// 使用指定数据源执行 SQL
-String result = mysqlOptionService.executeSqlWithDataSource("db2", "SELECT * FROM orders");
-
-// 获取所有数据源名称
-List<String> dataSourceNames = dataSourceService.getDataSourceNames();
-
-// 获取默认数据源名称
-String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
-```
-
 ### 构建项目
 
 ```bash
@@ -113,7 +108,18 @@ A Spring Boot-based MySQL server that supports executing arbitrary SQL and direc
 ## MCP JSON Configuration
 
 ```json
-// MCP JSON configuration will be provided by the user
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+      ],
+      "env": {}
+    }
+  }
+}
 ```
 
 ## Features
@@ -166,22 +172,6 @@ Configuration notes:
 - Users only need to configure `url`, `username`, and `password`, other configurations have reasonable defaults
 
 ## Usage
-
-### In Code
-
-```java
-// Execute SQL using the default datasource
-String result = mysqlOptionService.executeSql("SELECT * FROM users");
-
-// Execute SQL using a specified datasource
-String result = mysqlOptionService.executeSqlWithDataSource("db2", "SELECT * FROM orders");
-
-// Get all datasource names
-List<String> dataSourceNames = dataSourceService.getDataSourceNames();
-
-// Get the default datasource name
-String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
-```
 
 ### Build the Project
 
