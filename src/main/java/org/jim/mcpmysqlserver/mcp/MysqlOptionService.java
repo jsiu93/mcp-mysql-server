@@ -46,6 +46,22 @@ public class MysqlOptionService {
     }
 
     /**
+     * 判断当前服务是否可用，如果可用则返回所有可用的数据源名称，否则返回错误信息
+     */
+    @Tool(description = "Check if the MySQLOptionService is available. If available, return all available datasource names.")
+    public String isAvailable() {
+        try {
+            List<String> dataSourceNames = dataSourceService.getDataSourceNames();
+            return objectMapper.writeValueAsString(dataSourceNames);
+        } catch (Exception e) {
+            log.error("Error checking availability: {}", e.getMessage(), e);
+            return e.getMessage();
+        }
+    }
+
+
+
+    /**
      * 执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值
      * 在所有可用的数据源上执行相同的SQL查询
      * 使用异步多线程方式执行，最多5个线程同时执行

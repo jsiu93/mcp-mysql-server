@@ -1,6 +1,10 @@
 # MCP MySQL Server
 
-一个基于 Spring AI 的MCP，支持执行任意 SQL 并直接透传 MySQL 服务器的返回值。
+[中文文档](#中文文档) | [English Documentation](#english-documentation)
+
+## 中文文档
+
+一个基于 Spring AI 的MCP，支持执行任意 SQL。
 
 ## 环境要求
 
@@ -93,11 +97,9 @@ java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
 java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar --datasource.config=/path/to/your-datasource.yml
 ```
 
----
+## English Documentation
 
-# MCP MySQL Server (English Documentation)
-
-A Spring AI MCP server that supports executing arbitrary SQL and directly transmits MySQL server responses.
+A Spring AI MCP server that supports executing arbitrary SQL.
 
 ## Environment Requirements
 
