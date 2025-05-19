@@ -32,13 +32,23 @@ public class McpMysqlServerApplication {
 
         // 检查端口是否已被占用
         if (PortUtils.isPortInUse(port)) {
-            log.error("Port {} is already in use. The application may already be running. Exiting...", port);
-            // 退出应用，状态码1表示异常退出
-            System.exit(1);
-            return;
+            log.warn("Port {} is already in use. Trying to start with a random available port...", port);
+            // 获取一个随机可用端口
+            int randomPort = PortUtils.findAvailablePort();
+            if (randomPort <= 0) {
+                log.error("Failed to find an available port. Exiting...");
+                System.exit(1);
+                return;
+            }
+
+            // 设置系统属性，使Spring Boot使用新的端口
+            log.info("Using random available port: {}", randomPort);
+            System.setProperty("server.port", String.valueOf(randomPort));
         }
 
-        log.info("Starting application on port {}", port);
+        // 获取最终使用的端口号（可能是随机分配的）
+        String finalPort = System.getProperty("server.port", String.valueOf(port));
+        log.info("Starting application on port {}", finalPort);
         SpringApplication.run(McpMysqlServerApplication.class, args);
     }
 
