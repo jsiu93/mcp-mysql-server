@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: classpath:extension.yml
   ai:
     mcp:
       server:
@@ -7,3 +9,9 @@ spring:
         stdio: true
 server:
   port: 9433
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /Users/xin.y/Downloads/mcpLog/mcp.log

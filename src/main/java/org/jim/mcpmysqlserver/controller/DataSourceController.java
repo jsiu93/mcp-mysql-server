@@ -34,6 +34,13 @@ public class DataSourceController {
     }
 
 
+    @RequestMapping("/executeGroovyScript")
+    public ResponseEntity<String> executeGroovyScript(@RequestParam String extensionName, @RequestParam String input) {
+        String result = mysqlOptionService.executeGroovyScript(extensionName, input);
+        return ResponseEntity.ok(result);
+    }
+
+
     /**
      * 获取所有数据源名称
      * @return 数据源名称列表
@@ -108,8 +115,8 @@ public class DataSourceController {
         try {
             String sqlResult;
             if (datasource == null || datasource.isEmpty() ||
-                "primary".equals(datasource) ||
-                dataSourceService.getDefaultDataSourceName().equals(datasource)) {
+                    "primary".equals(datasource) ||
+                    dataSourceService.getDefaultDataSourceName().equals(datasource)) {
                 sqlResult = mysqlOptionService.executeSql(sql);
             } else {
                 sqlResult = mysqlOptionService.executeSqlWithDataSource(datasource, sql);
@@ -119,7 +126,7 @@ public class DataSourceController {
             result.put("result", sqlResult);
             log.info("SQL execution successful");
         } catch (Exception e) {
-            result.put("status", "error");
+            result.put("sxtatus", "error");
             result.put("message", e.getMessage());
             log.error("SQL execution failed: {}", e.getMessage(), e);
         }

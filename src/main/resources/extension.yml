@@ -1,0 +1,15 @@
+# 此配置目前考虑用于扩展功能的配置
+extensions:
+  - name: stringProcessor
+    script: "def greet(name) { return \"Hello, $name!\" }; greet('Java')"
+    #script-path: "classpath:com/example/CustomFilter.groovy"
+    description: "反转字符串"
+    prompt: "the string to reverse: "
+  - name: customFilter
+    enabled: false
+    #cript-path: "classpath:com/example/CustomFilter.groovy"
+    description: "自定义Java类处理"
+    prompt: "the string to process: "
+  - name: zstdDecode
+    description: "解码业务快照数据"
+    prompt: "decode the snapshot_data from the table core_snapshot or encrypted data of com.github.luben.zstd"

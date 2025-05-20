@@ -3,7 +3,10 @@ package org.jim.mcpmysqlserver.mcp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.jim.mcpmysqlserver.config.extension.Extension;
+import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +39,10 @@ public class MysqlOptionService {
     private final DataSourceService dataSourceService;
     private final ObjectMapper objectMapper;
 
+
+    @Resource
+    private GroovyService groovyService;
+
     @Autowired
     public MysqlOptionService(DataSourceService dataSourceService) {
         this.dataSourceService = dataSourceService;
@@ -58,7 +65,6 @@ public class MysqlOptionService {
             return e.getMessage();
         }
     }
-
 
 
     /**
@@ -252,6 +258,25 @@ public class MysqlOptionService {
             return e.getMessage();
         }
     }
+
+    /**
+     * 通过扩展名称，执行groovy脚本，处理传入的任意字符串
+     */
+    @Tool(description = "decode the snapshot_data from the table core_snapshot or encrypted data of com.github.luben.zstd. First call getAllExtensions to get the extension info")
+    public String executeGroovyScript(String extensionName, String input) {
+        // 执行脚本
+        return groovyService.executeGroovyScript(extensionName, input);
+    }
+
+    /**
+     * 获取所有扩展的信息
+     */
+    @Tool(description = "Get all extensions information.")
+    public List<Extension> getAllExtensions() {
+        // 获取所有扩展的信息
+        return groovyService.getAllExtensions();
+    }
+
 
     /**
      * 处理ResultSet并转换为JSON字符串
