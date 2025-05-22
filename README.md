@@ -1,4 +1,6 @@
-[中文文档](#MCP MySQL Server) | [English Documentation](#MCP MySQL Server)
+# MCP MySQL Server
+
+[中文文档](#中文文档) | [English Documentation](#english-documentation)
 
 ## 快速上手
 
@@ -8,8 +10,7 @@
 {
   "mcpServers": {
     "mcp-mysql-server": {
-      "command": "/path/to/your/project/mvnw -f /path/to/your/project/pom.xml spring-boot:run",
-      "args": []
+      "command": "/path/to/your/project/mvnw -f /path/to/your/project/pom.xml spring-boot:run"
     }
   }
 }
