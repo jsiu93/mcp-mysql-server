@@ -34,8 +34,8 @@ public class GroovyService {
 
 
     @SneakyThrows
-    public String executeGroovyScript(String extensionName, String input) {
-        input = "KLUv/WDTDSUkAFZxskbgsDoHSOiEGGOMMYa1QHgJnMjkdu4zF/OgORFkHke5mwuNMSNJzopsWp8nbBVEv3VJ5Cv+2/0BA4tuIoIRYEwaMcYYY0wIkgCqAKMAGZfyxu+b2s9HrMG3Tm18H4V3R4kmcba4r5gvL8cnuZsvKDHpR3PbDbQhx3m4kPN8wE7MJTpl6k0gb+wvEXzWdvtyvCIhyzGJSVxnu3H/Kj2myLfbm5uPIXdE61MBAhskjZPdbMbXwehH04MzvqjJb3DzJTkRcAgn40tqkcPzk3k/iW6Q2hrFITXKhuynVDyAlRAIOEoifvUoYjcQE+tq9VhLegJWC/FKYy70FC0YNHVmVjtZxVgBwXHehNV6unSWmhuZa13hSm1sajRnZ2HoIEasMxW1UIRMFfHSY2LqarXapFBZZACZWElVVivt1Wmv9PMi1lsnvabVUaB0mglV5qx5NhM7O1MY2jecqYuZbgG2sly6TIeVvNlunbALQRFnXd73EP9REL5ESwqDqrMWNy0vblDli14XsuVzMyqvVKbVUSx0FWjqAe0prPSbzdRkaPdiq7SETAXQyV5SDq0uq7nBcHaYEC290zCTstBOAq2hMKqHs6/EqDFXis46LaWHnAdDaxVgK4tKd2mlX8iWqpuRL4ko2kxG+0XKfDfnW5cZHqIMk+j0wYA0IIHI4/QBgjkWsx6p9psHykdtU5cgVsOWpIn6B785LsRxfF/+EXZCn4dPYh6Q+j4wNMebwBQm1sRRKnGMSioRbLeQ/eA8IMjjAUNQZ39En0LMrTHJdfACytLkl3c+8Ps+7+s+7vNQtNZiwbtj1CjN9e4YcWEH6j6dp/M+wNYLKSvIpMA0sqj8e5ujUW/Os6nJkf+SDwTkfTxPxwO9z/vgkK01QE/qERvImPy8TnqrhepBsekvKx0O/DzOo9GQslLWDAof0vPsLFRUmrO7bDoYg9IDgLuoMbFDSJGIiIwkqaQDUITIGNGcB9JRDMYooDLEEEyIUAQSK4FIYCNEYWJspgVYDKkDSFl5LV7sQA/kGEkzBQzXHfH2ZRdfULdxRjtVoKKFxSGXM6EOCTDIUk4A+GJAS9JBdJnAUUouDBY7QoIKZ2H1zKh3GJCFALjEhd8k5UY7w/TNytCKrMitAECcdpJe7hRd3sFQyhbdDdQXcdAjY3welIUeCFQmstBGVdeILcODMCw2EXhP8aRgpcJ84S9XovGrgrVfbB5nrbuQvwNY+RRn9fOBznHjLWh+rmVNbytMipPM/n7mqM9rJ99FjAl6B8vc9w6eYIFjENGjO7pgCUROIY1oGc++reF0Kb2gq2Qq/dYlGHJMZWh3Qt1LFg3R0PsuVQQ68u8ToX3p6SmagJdddXxe31RJVpF3w681X3Zlx7k2k0EacWdu2kCrTpjQYjmwxLFJoxSo8Dp9FwgCnSgRss8YDEqHrJWnlcp5wzyj/t94bGRXHXcQrWXmnMBAiJSUbc1tVtU9BnB80cyWBTU2VtRK2HKzxYF1AVIPAgkCKxbVE8yEjPZPXQa6sLe0CDiQJalTGqo=";
+    public Object executeGroovyScript(String extensionName, String input) {
+        //input = "KLUv/WDTDSUkAFZxskbgsDoHSOiEGGOMMYa1QHgJnMjkdu4zF/OgORFkHke5mwuNMSNJzopsWp8nbBVEv3VJ5Cv+2/0BA4tuIoIRYEwaMcYYY0wIkgCqAKMAGZfyxu+b2s9HrMG3Tm18H4V3R4kmcba4r5gvL8cnuZsvKDHpR3PbDbQhx3m4kPN8wE7MJTpl6k0gb+wvEXzWdvtyvCIhyzGJSVxnu3H/Kj2myLfbm5uPIXdE61MBAhskjZPdbMbXwehH04MzvqjJb3DzJTkRcAgn40tqkcPzk3k/iW6Q2hrFITXKhuynVDyAlRAIOEoifvUoYjcQE+tq9VhLegJWC/FKYy70FC0YNHVmVjtZxVgBwXHehNV6unSWmhuZa13hSm1sajRnZ2HoIEasMxW1UIRMFfHSY2LqarXapFBZZACZWElVVivt1Wmv9PMi1lsnvabVUaB0mglV5qx5NhM7O1MY2jecqYuZbgG2sly6TIeVvNlunbALQRFnXd73EP9REL5ESwqDqrMWNy0vblDli14XsuVzMyqvVKbVUSx0FWjqAe0prPSbzdRkaPdiq7SETAXQyV5SDq0uq7nBcHaYEC290zCTstBOAq2hMKqHs6/EqDFXis46LaWHnAdDaxVgK4tKd2mlX8iWqpuRL4ko2kxG+0XKfDfnW5cZHqIMk+j0wYA0IIHI4/QBgjkWsx6p9psHykdtU5cgVsOWpIn6B785LsRxfF/+EXZCn4dPYh6Q+j4wNMebwBQm1sRRKnGMSioRbLeQ/eA8IMjjAUNQZ39En0LMrTHJdfACytLkl3c+8Ps+7+s+7vNQtNZiwbtj1CjN9e4YcWEH6j6dp/M+wNYLKSvIpMA0sqj8e5ujUW/Os6nJkf+SDwTkfTxPxwO9z/vgkK01QE/qERvImPy8TnqrhepBsekvKx0O/DzOo9GQslLWDAof0vPsLFRUmrO7bDoYg9IDgLuoMbFDSJGIiIwkqaQDUITIGNGcB9JRDMYooDLEEEyIUAQSK4FIYCNEYWJspgVYDKkDSFl5LV7sQA/kGEkzBQzXHfH2ZRdfULdxRjtVoKKFxSGXM6EOCTDIUk4A+GJAS9JBdJnAUUouDBY7QoIKZ2H1zKh3GJCFALjEhd8k5UY7w/TNytCKrMitAECcdpJe7hRd3sFQyhbdDdQXcdAjY3welIUeCFQmstBGVdeILcODMCw2EXhP8aRgpcJ84S9XovGrgrVfbB5nrbuQvwNY+RRn9fOBznHjLWh+rmVNbytMipPM/n7mqM9rJ99FjAl6B8vc9w6eYIFjENGjO7pgCUROIY1oGc++reF0Kb2gq2Qq/dYlGHJMZWh3Qt1LFg3R0PsuVQQ68u8ToX3p6SmagJdddXxe31RJVpF3w681X3Zlx7k2k0EacWdu2kCrTpjQYjmwxLFJoxSo8Dp9FwgCnSgRss8YDEqHrJWnlcp5wzyj/t94bGRXHXcQrWXmnMBAiJSUbc1tVtU9BnB80cyWBTU2VtRK2HKzxYF1AVIPAgkCKxbVE8yEjPZPXQa6sLe0CDiQJalTGqo=";
 
 
         List<Extension> extensions = extensionConfig.getExtensions();
@@ -174,7 +174,7 @@ public class GroovyService {
             groovyEngine.put("inputString", input);
             Object result = groovyEngine.eval(scriptContent);
             log.info("Groovy script executed successfully for extension: {}", extensionName);
-            return result != null ? result.toString() : null;
+            return result;
 
         } catch (ScriptException e) {
             log.error("Error executing Groovy script '{}': {}", extension.getScriptPath(), e.getMessage(), e);

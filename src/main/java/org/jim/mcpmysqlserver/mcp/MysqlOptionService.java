@@ -262,10 +262,10 @@ public class MysqlOptionService {
     /**
      * 通过扩展名称，执行groovy脚本，处理传入的任意字符串
      */
-    @Tool(description = "decode the snapshot_data from the table core_snapshot or encrypted data of com.github.luben.zstd. First call getAllExtensions to get the extension info")
+    @Tool(description = "Execute Groovy script by extension name and process the input string. First call getAllExtensions to get the extension info")
     public String executeGroovyScript(String extensionName, String input) {
         // 执行脚本
-        return groovyService.executeGroovyScript(extensionName, input);
+        return groovyService.executeGroovyScript(extensionName, input).toString();
     }
 
     /**

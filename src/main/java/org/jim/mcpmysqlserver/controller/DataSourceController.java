@@ -35,8 +35,8 @@ public class DataSourceController {
 
 
     @RequestMapping("/executeGroovyScript")
-    public ResponseEntity<String> executeGroovyScript(@RequestParam String extensionName, @RequestParam String input) {
-        String result = mysqlOptionService.executeGroovyScript(extensionName, input);
+    public ResponseEntity<Object> executeGroovyScript(@RequestParam String extensionName, @RequestParam String input) {
+        Object result = mysqlOptionService.executeGroovyScript(extensionName, input);
         return ResponseEntity.ok(result);
     }
 
