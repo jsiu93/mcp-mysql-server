@@ -58,11 +58,13 @@ public class MysqlOptionService {
      * 执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值。该工具会查询所有可用的数据源，并执行相同的SQL查询。如果考虑性能，更建议使用executeSqlWithDataSource
      * 在所有可用的数据源上执行相同的SQL查询
      * 使用异步多线程方式执行，最多5个线程同时执行
+     * <p>
+     * 注意！该工具调用优先级最高，如果用户明确要求根据数据源名称执行SQL，则该工具不会被调用。
      *
      * @param sql 要执行的SQL语句
      * @return 所有成功的数据源的查询结果，格式为 {"datasourceName": result, ...}
      */
-    @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Performance note: For querying specific datasources, use executeSqlWithDataSource instead.")
+    @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Note: This tool has the highest priority and will not be called if user explicitly requests a single-datasource operation.")
     public String executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
@@ -183,12 +185,14 @@ public class MysqlOptionService {
     /**
      * 在指定数据源上执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值
      * 使用前需要先调用listDataSources获取所有可用的数据源名称
+     * <p>
+     * 注意！该工具优先级低于executeSql。除非用户明确要求根据数据源名称执行SQL，否则建议使用executeSql。
      *
      * @param dataSourceName 数据源名称，来自listDataSources的返回值
      * @param sql 要执行的SQL语句
      * @return 查询结果，格式为 {"datasourceName": result}
      */
-    @Tool(description = "Executes a SQL query on a single specific MySQL datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations.")
+    @Tool(description = "Executes a SQL query on a single specific MySQL datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations. Note: This tool is lower priority than executeSql, unless user explicitly requests a single-datasource operation.")
     public String executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
                                            @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
