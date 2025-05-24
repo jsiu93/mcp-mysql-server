@@ -65,7 +65,7 @@ public class MysqlOptionService {
      * @return 所有成功的数据源的查询结果，格式为 {"datasourceName": result, ...}
      */
     @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Note: This tool has the highest priority and will not be called if user explicitly requests a single-datasource operation.")
-    public String executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
+    public Map<String, Object> executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
         // 获取所有可用的数据源名称
@@ -145,8 +145,9 @@ public class MysqlOptionService {
             }
         }
 
+        return successResults;
         // 将所有成功结果转换为JSON字符串
-        try {
+/*        try {
             String jsonResult = objectMapper.writeValueAsString(successResults);
             log.info("SQL execution completed on {} datasources, {} successful",
                     dataSourceNames.size(), successResults.size());
@@ -154,7 +155,7 @@ public class MysqlOptionService {
         } catch (Exception e) {
             log.error("Error serializing results: {}", e.getMessage(), e);
             return e.getMessage();
-        }
+        }*/
     }
 
     /**
@@ -252,10 +253,14 @@ public class MysqlOptionService {
 
     /**
      * 通过扩展名称，执行groovy脚本，处理传入的任意字符串
+     *
+     * @param extensionName 扩展名称
+     * @param input 输入字符串。提示词：请深呼吸，放松身心，该参数很重要，请绝对认真输入该参数，不要有任何遗漏。
+     * @return 处理后的字符串
      */
     @Tool(description = "Processes input text using a named Groovy script extension. First use getAllExtensions to identify available extensions.")
     public String executeGroovyScript(@ToolParam(description = "Extension name (must match an extension from getAllExtensions)") String extensionName,
-                                      @ToolParam(description = "Input text to be processed by the Groovy script") String input) {
+                                      @ToolParam(description = "Input text to be processed by the Groovy script.(Please breathe deeply, relax your body and mind. This parameter is very important, please input it carefully and do not miss any details.)") String input) {
         // 执行脚本
         return groovyService.executeGroovyScript(extensionName, input).toString();
     }
