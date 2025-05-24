@@ -9,6 +9,7 @@ import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -52,31 +53,17 @@ public class MysqlOptionService {
         log.info("MysqlOptionService initialized with DataSourceService");
     }
 
-    /**
-     * 判断当前服务是否可用，如果可用则返回所有可用的数据源名称，否则返回错误信息
-     */
-    @Tool(description = "Check if the MySQLOptionService is available. If available, return all available datasource names.")
-    public String isAvailable() {
-        try {
-            List<String> dataSourceNames = dataSourceService.getDataSourceNames();
-            return objectMapper.writeValueAsString(dataSourceNames);
-        } catch (Exception e) {
-            log.error("Error checking availability: {}", e.getMessage(), e);
-            return e.getMessage();
-        }
-    }
-
 
     /**
-     * 执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值
+     * 执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值。该工具会查询所有可用的数据源，并执行相同的SQL查询。如果考虑性能，更建议使用executeSqlWithDataSource
      * 在所有可用的数据源上执行相同的SQL查询
      * 使用异步多线程方式执行，最多5个线程同时执行
      *
      * @param sql 要执行的SQL语句
      * @return 所有成功的数据源的查询结果，格式为 {"datasourceName": result, ...}
      */
-    @Tool(description = "Execute SQL query on all available datasources and return the results.")
-    public String executeSql(String sql) {
+    @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Performance note: For querying specific datasources, use executeSqlWithDataSource instead.")
+    public String executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
         // 获取所有可用的数据源名称
@@ -133,8 +120,7 @@ public class MysqlOptionService {
                     .toList();
 
             // 等待所有任务完成
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0]));
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
             // 设置超时时间，避免长时间等待
             try {
@@ -173,7 +159,7 @@ public class MysqlOptionService {
      * 获取所有可用的数据源名称
      * @return 数据源名称列表和默认数据源名称
      */
-    @Tool(description = "List all available datasource names.")
+    @Tool(description = "Lists all available MySQL datasource names. Returns JSON with 'datasources' array and 'default' datasource name. Use this before executeSqlWithDataSource to identify available datasources.")
     public String listDataSources() {
         log.info("Listing all available datasources");
 
@@ -198,12 +184,13 @@ public class MysqlOptionService {
      * 在指定数据源上执行任意SQL语句，不做限制，直接透传MySQL服务器的返回值
      * 使用前需要先调用listDataSources获取所有可用的数据源名称
      *
-     * @param dataSourceName 数据源名称
+     * @param dataSourceName 数据源名称，来自listDataSources的返回值
      * @param sql 要执行的SQL语句
      * @return 查询结果，格式为 {"datasourceName": result}
      */
-    @Tool(description = "Execute SQL query on a specific datasource. First call listDataSources to get available datasource names.")
-    public String executeSqlWithDataSource(String dataSourceName, String sql) {
+    @Tool(description = "Executes a SQL query on a single specific MySQL datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations.")
+    public String executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
+                                           @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
 
         // 存储查询结果
@@ -262,8 +249,9 @@ public class MysqlOptionService {
     /**
      * 通过扩展名称，执行groovy脚本，处理传入的任意字符串
      */
-    @Tool(description = "Execute Groovy script by extension name and process the input string. First call getAllExtensions to get the extension info")
-    public String executeGroovyScript(String extensionName, String input) {
+    @Tool(description = "Processes input text using a named Groovy script extension. First use getAllExtensions to identify available extensions.")
+    public String executeGroovyScript(@ToolParam(description = "Extension name (must match an extension from getAllExtensions)") String extensionName,
+                                      @ToolParam(description = "Input text to be processed by the Groovy script") String input) {
         // 执行脚本
         return groovyService.executeGroovyScript(extensionName, input).toString();
     }
@@ -271,7 +259,7 @@ public class MysqlOptionService {
     /**
      * 获取所有扩展的信息
      */
-    @Tool(description = "Get all extensions information.")
+    @Tool(description = "Returns information about all available Groovy script extensions including their names, descriptions, and parameters. Use before calling executeGroovyScript.")
     public List<Extension> getAllExtensions() {
         // 获取所有扩展的信息
         return groovyService.getAllExtensions();
