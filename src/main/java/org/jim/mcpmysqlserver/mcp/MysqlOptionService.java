@@ -146,16 +146,6 @@ public class MysqlOptionService {
         }
 
         return successResults;
-        // 将所有成功结果转换为JSON字符串
-/*        try {
-            String jsonResult = objectMapper.writeValueAsString(successResults);
-            log.info("SQL execution completed on {} datasources, {} successful",
-                    dataSourceNames.size(), successResults.size());
-            return jsonResult;
-        } catch (Exception e) {
-            log.error("Error serializing results: {}", e.getMessage(), e);
-            return e.getMessage();
-        }*/
     }
 
     /**
@@ -163,7 +153,7 @@ public class MysqlOptionService {
      * @return 数据源名称列表和默认数据源名称
      */
     @Tool(description = "Lists all available MySQL datasource names. Returns JSON with 'datasources' array and 'default' datasource name. Use this before executeSqlWithDataSource to identify available datasources.")
-    public String listDataSources() {
+    public Map<String, Object> listDataSources() {
         log.info("Listing all available datasources");
 
         List<String> dataSourceNames = dataSourceService.getDataSourceNames();
@@ -173,14 +163,7 @@ public class MysqlOptionService {
         result.put("datasources", dataSourceNames);
         result.put("default", defaultDataSourceName);
 
-        try {
-            String jsonResult = objectMapper.writeValueAsString(result);
-            log.info("Found {} datasources, default: {}", dataSourceNames.size(), defaultDataSourceName);
-            return jsonResult;
-        } catch (Exception e) {
-            log.error("Error serializing datasource list: {}", e.getMessage(), e);
-            return e.getMessage();
-        }
+        return result;
     }
 
     /**
@@ -194,8 +177,8 @@ public class MysqlOptionService {
      * @return 查询结果，格式为 {"datasourceName": result}
      */
     @Tool(description = "Executes a SQL query on a single specific MySQL datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations. Note: This tool is lower priority than executeSql, unless user explicitly requests a single-datasource operation.")
-    public String executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
-                                           @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
+    public Map<String, Object> executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
+                                                        @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
 
         // 存储查询结果
@@ -207,12 +190,7 @@ public class MysqlOptionService {
             String errorMsg = "Datasource [" + dataSourceName + "] not found";
             log.error(errorMsg);
             result.put(dataSourceName, errorMsg);
-            try {
-                return objectMapper.writeValueAsString(result);
-            } catch (Exception e) {
-                log.error("Error serializing error result: {}", e.getMessage(), e);
-                return errorMsg;
-            }
+            return result;
         }
 
         try (Connection conn = targetDataSource.getConnection();
@@ -242,13 +220,7 @@ public class MysqlOptionService {
             result.put(dataSourceName, e.getMessage());
         }
 
-        // 将结果转换为JSON字符串
-        try {
-            return objectMapper.writeValueAsString(result);
-        } catch (Exception e) {
-            log.error("Error serializing results: {}", e.getMessage(), e);
-            return e.getMessage();
-        }
+        return result;
     }
 
     /**
