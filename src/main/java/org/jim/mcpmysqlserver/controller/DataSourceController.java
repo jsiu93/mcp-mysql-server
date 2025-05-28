@@ -76,7 +76,7 @@ public class DataSourceController {
         result.put("datasource", dsName);
 
         try {
-            String testResult;
+            Map<String, Object> testResult;
             if ("primary".equals(dsName) || dataSourceService.getDefaultDataSourceName().equals(dsName)) {
                 testResult = mysqlOptionService.executeSql("SELECT 1 AS test");
             } else {
@@ -113,7 +113,7 @@ public class DataSourceController {
         result.put("datasource", datasource != null ? datasource : dataSourceService.getDefaultDataSourceName());
 
         try {
-            String sqlResult;
+            Map<String, Object> sqlResult;
             if (datasource == null || datasource.isEmpty() ||
                     "primary".equals(datasource) ||
                     dataSourceService.getDefaultDataSourceName().equals(datasource)) {

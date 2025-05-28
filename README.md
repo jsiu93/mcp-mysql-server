@@ -10,7 +10,12 @@
 {
   "mcpServers": {
     "mcp-mysql-server": {
-      "command": "/path/to/your/project/mvnw -f /path/to/your/project/pom.xml spring-boot:run"
+      "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw",
+      "args": [
+        "-f",
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml",
+        "spring-boot:run"
+      ]
     }
   }
 }
@@ -167,8 +172,12 @@ A Spring AI MCP server that supports executing arbitrary SQL.
 {
   "mcpServers": {
     "mcp-mysql-server": {
-      "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw -f /Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml spring-boot:run",
-      "args": []
+      "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw",
+      "args": [
+        "-f",
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml",
+        "spring-boot:run"
+      ]
     }
   }
 }

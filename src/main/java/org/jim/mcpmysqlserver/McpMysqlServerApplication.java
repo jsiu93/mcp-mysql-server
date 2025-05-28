@@ -1,13 +1,22 @@
 package org.jim.mcpmysqlserver;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.server.McpServerFeatures;
+import io.modelcontextprotocol.server.McpSyncServerExchange;
+import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
 import org.jim.mcpmysqlserver.util.PortUtils;
+import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * 应用主类
@@ -104,4 +113,68 @@ public class McpMysqlServerApplication {
                 .toolObjects(mysqlOptionService)
                 .build();
     }
+
+    @Bean
+    public List<McpServerFeatures.SyncResourceSpecification> myResources() {
+        McpSchema.Annotations annotations = new McpSchema.Annotations(
+                List.of(McpSchema.Role.USER, McpSchema.Role.ASSISTANT), 0.9
+        );
+
+        var systemInfoResource = new McpSchema.Resource("testuri", "测试资源", "测试资源描述。这是一个执行mysql的sql语法工具", "application/json", annotations);
+        var resourceSpecification = new McpServerFeatures.SyncResourceSpecification(systemInfoResource, (exchange, request) -> {
+            try {
+                var systemInfo = Map.of("test1", "test1111");
+                String jsonContent = new ObjectMapper().writeValueAsString(systemInfo);
+                return new McpSchema.ReadResourceResult(
+                        List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to generate system info", e);
+            }
+        });
+
+
+        return List.of(resourceSpecification);
+    }
+
+    @Bean
+    public List<McpServerFeatures.SyncPromptSpecification> myPrompts() {
+        var prompt = new McpSchema.Prompt("greeting", "A friendly greeting prompt", List.of(new McpSchema.PromptArgument("name", "The name to greet", true)));
+
+        var promptSpecification = new McpServerFeatures.SyncPromptSpecification(prompt, (exchange, getPromptRequest) -> {
+            String nameArgument = (String) getPromptRequest.arguments().get("name");
+            if (nameArgument == null) {
+                nameArgument = "friend";
+            }
+            var userMessage = new McpSchema.PromptMessage(McpSchema.Role.USER, new McpSchema.TextContent("Hello " + nameArgument + "! How can I assist you today?"));
+            return new McpSchema.GetPromptResult("A personalized greeting message", List.of(userMessage));
+        });
+
+        return List.of(promptSpecification);
+    }
+
+
+/*    @Bean
+    public List<McpServerFeatures.SyncCompletionSpecification> myCompletions() {
+        var completion = new McpServerFeatures.SyncCompletionSpecification(
+                "code-completion",
+                "Provides code completion suggestions",
+                (exchange, request) -> {
+                    // Implementation that returns completion suggestions
+                    return new McpSchema.CompleteResult(List.of(
+                            new McpSchema.CompleteResult.CompleteCompletion ("suggestion1", "First suggestion"),
+                            new McpSchema.Completion("suggestion2", "Second suggestion")
+                    ));
+                }
+        );
+
+        return List.of(completion);
+    }*/
+
+    @Bean
+    public BiConsumer<McpSyncServerExchange, List<McpSchema.Root>> rootsChangeHandler() {
+        return (exchange, roots) -> {
+            log.info("Registering root resources: {}", roots);
+        };
+    }
+
 }

@@ -7,6 +7,8 @@ spring:
         name: mcp-mysql-server
         version: 1.0.0
         stdio: true
+  application:
+    name: mcp-mysql-server
 server:
   port: 9433
 logging:
@@ -14,4 +16,4 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
-    name: /Users/xin.y/Downloads/mcpLog/mcp.log
+    name: ~/Downloads/mcpLog/mcp.log

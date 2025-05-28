@@ -18,7 +18,9 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -200,5 +202,16 @@ public class GroovyService {
 
     public List<Extension> getAllExtensions() {
         return extensionConfig.getExtensions();
+    }
+
+
+    public static void main(String[] args) {
+        record Employee(String id, String name) {}
+
+        Employee alice = new Employee("1", "Alice");
+
+        Map<Employee, Integer> employeeSalary = new HashMap<>();
+        employeeSalary.put(new Employee("1", "Alice"), 5000);
+        System.out.println(employeeSalary.get(new Employee("1", "Alice"))); // 输出: 5000
     }
 }

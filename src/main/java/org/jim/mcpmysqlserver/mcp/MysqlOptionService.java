@@ -1,7 +1,9 @@
 package org.jim.mcpmysqlserver.mcp;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -230,11 +232,23 @@ public class MysqlOptionService {
      * @param input 输入字符串。提示词：请深呼吸，放松身心，该参数很重要，请绝对认真输入该参数，不要有任何遗漏。
      * @return 处理后的字符串
      */
-    @Tool(description = "Processes input text using a named Groovy script extension. First use getAllExtensions to identify available extensions.")
-    public String executeGroovyScript(@ToolParam(description = "Extension name (must match an extension from getAllExtensions)") String extensionName,
+    @Tool(description = "Processes input text using a named Groovy script extension. First use getAllExtensions to identify available extensions.", returnDirect = true)
+    public JsonNode executeGroovyScript(@ToolParam(description = "Extension name (must match an extension from getAllExtensions)") String extensionName,
                                       @ToolParam(description = "Input text to be processed by the Groovy script.(Please breathe deeply, relax your body and mind. This parameter is very important, please input it carefully and do not miss any details.)") String input) {
         // 执行脚本
-        return groovyService.executeGroovyScript(extensionName, input).toString();
+        Object o = groovyService.executeGroovyScript(extensionName, input);
+        if (o instanceof String) {
+            try {
+                // 尝试将结果转换为JsonNode
+                return objectMapper.readTree((String) o);
+            } catch (Exception e) {
+                log.error("Failed to parse Groovy script result as JSON: {}", e.getMessage(), e);
+                return objectMapper.createObjectNode().put("error", "Invalid JSON result from Groovy script");
+            }
+        } else {
+            // 如果不是字符串，直接返回结果
+            return objectMapper.valueToTree(o);
+        }
     }
 
     /**
