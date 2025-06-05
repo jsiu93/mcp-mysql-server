@@ -120,7 +120,7 @@ public class McpMysqlServerApplication {
                 List.of(McpSchema.Role.USER, McpSchema.Role.ASSISTANT), 0.9
         );
 
-        var systemInfoResource = new McpSchema.Resource("testuri", "测试资源", "测试资源描述。这是一个执行mysql的sql语法工具", "application/json", annotations);
+        var systemInfoResource = new McpSchema.Resource("file:///Users/xin.y/Documents/table.json", "测试数据库与表信息", "列出数据库与表信息", "application/json", annotations);
         var resourceSpecification = new McpServerFeatures.SyncResourceSpecification(systemInfoResource, (exchange, request) -> {
             try {
                 var systemInfo = Map.of("test1", "test1111");
