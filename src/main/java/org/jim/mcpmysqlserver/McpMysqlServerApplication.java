@@ -7,7 +7,6 @@ import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
 import org.jim.mcpmysqlserver.util.PortUtils;
-import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
@@ -41,7 +40,6 @@ public class McpMysqlServerApplication {
 
         // 检查端口是否已被占用
         if (PortUtils.isPortInUse(port)) {
-            log.warn("Port {} is already in use. Trying to start with a random available port...", port);
             // 获取一个随机可用端口
             int randomPort = PortUtils.findAvailablePort();
             if (randomPort <= 0) {
@@ -51,13 +49,11 @@ public class McpMysqlServerApplication {
             }
 
             // 设置系统属性，使Spring Boot使用新的端口
-            log.info("Using random available port: {}", randomPort);
             System.setProperty("server.port", String.valueOf(randomPort));
         }
 
         // 获取最终使用的端口号（可能是随机分配的）
         String finalPort = System.getProperty("server.port", String.valueOf(port));
-        log.info("Starting application on port {}", finalPort);
         SpringApplication.run(McpMysqlServerApplication.class, args);
     }
 
@@ -78,7 +74,7 @@ public class McpMysqlServerApplication {
                     try {
                         return Integer.parseInt(arg.substring("--server.port=".length()));
                     } catch (NumberFormatException e) {
-                        log.warn("Invalid port number in argument: {}", arg);
+                        //log.warn("Invalid port number in argument: {}", arg);
                     }
                 }
                 // 检查-Dserver.port=xxx格式
@@ -86,7 +82,7 @@ public class McpMysqlServerApplication {
                     try {
                         return Integer.parseInt(arg.substring("-Dserver.port=".length()));
                     } catch (NumberFormatException e) {
-                        log.warn("Invalid port number in argument: {}", arg);
+                        //log.warn("Invalid port number in argument: {}", arg);
                     }
                 }
             }
@@ -98,7 +94,7 @@ public class McpMysqlServerApplication {
             try {
                 return Integer.parseInt(systemPort);
             } catch (NumberFormatException e) {
-                log.warn("Invalid port number in system property: {}", systemPort);
+                //log.warn("Invalid port number in system property: {}", systemPort);
             }
         }
 
@@ -173,7 +169,7 @@ public class McpMysqlServerApplication {
     @Bean
     public BiConsumer<McpSyncServerExchange, List<McpSchema.Root>> rootsChangeHandler() {
         return (exchange, roots) -> {
-            log.info("Registering root resources: {}", roots);
+            //log.info("Registering root resources: {}", roots);
         };
     }
 

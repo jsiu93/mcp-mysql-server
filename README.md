@@ -16,6 +16,7 @@
     "mcp-mysql-server": {
       "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw",
       "args": [
+        "-q",
         "-f",
         "/Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml",
         "spring-boot:run"
@@ -195,6 +196,7 @@ datasource:
     "mcp-mysql-server": {
       "command": "/your-path/mcp-mysql-server/mvnw",
       "args": [
+        "-q",
         "-Dspring-boot.run.arguments=--datasource.config=/your-path/your-datasource.yml",
         "-f",
         "/your-path/mcp-mysql-server/pom.xml",
@@ -226,3 +228,9 @@ java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
   }
 }
 ```
+
+## Maven `-q` 参数说明
+
+在 MCP JSON 配置中，我们使用了 `-q`（quiet）参数来解决 [Spring AI 的日志输出问题](https://github.com/spring-projects/spring-ai/issues/3472)。这个参数可以抑制 Maven 构建过程中的大部分日志向stdio输出，从而防止因Maven日志输出导致MCP通讯握手失败。
+
+-----

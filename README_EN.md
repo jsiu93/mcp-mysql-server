@@ -16,6 +16,7 @@ A Spring AI-based MCP capable of executing any SQL query.
     "mcp-mysql-server": {
       "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw",
       "args": [
+        "-q",
         "-f",
         "/Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml",
         "spring-boot:run"
@@ -225,3 +226,11 @@ The corresponding MCP JSON configuration is as follows:
   }
 }
 ```
+
+-----
+
+## Maven `-q` Parameter Explanation
+
+In the MCP JSON configuration, we used the -q (quiet) parameter to address the Spring AI log output issue.[logging output issue in Spring AI](https://github.com/spring-projects/spring-ai/issues/3472) This parameter suppresses most of the logs during the Maven build process from being printed to stdio, thereby preventing MCP communication handshake failures caused by Maven log outputs.
+
+-----

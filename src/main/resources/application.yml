@@ -9,11 +9,15 @@ spring:
         stdio: true
   application:
     name: mcp-mysql-server
+  main:
+    banner-mode: off
 server:
   port: 9433
 logging:
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  config: classpath:logback-spring.xml
   file:
-    name: ~/Downloads/mcpLog/mcp.log
+    name: logs/mcp-server.log
+  level:
+    root: OFF
+  pattern:
+    console: ""
