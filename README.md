@@ -8,7 +8,7 @@
 
 ### 1\. MCP JSON 配置
 
-#### 推荐方式 (Maven Wrapper)
+#### 方式一：Maven Wrapper 启动
 
 ```json
 {
@@ -26,7 +26,7 @@
 }
 ```
 
-#### JAR 包方式 (可选，不支持扩展)
+#### 方式二：JAR 包启动
 
 ```json
 {
@@ -34,13 +34,18 @@
     "mcp-mysql-server": {
       "command": "java",
       "args": [
+        "-Dloader.path=/Users/xin.y/IdeaProjects/mcp-mysql-server/src/main/resources/groovy",
         "-jar",
-        "/Users/yangxin/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
       ]
     }
   }
 }
 ```
+
+**注意：**
+- `-Dloader.path` 参数为可选，仅在需要运行扩展功能时才需要指定，用于指定扩展jar依赖包的目录
+- 如果不使用扩展功能，可以省略 `-Dloader.path` 参数
 
 ### 2\. 数据源配置（最小配置）
 
@@ -78,8 +83,12 @@ extensions:
 在运行之前，请确保你的环境满足以下条件：
 
 * **JDK 21** 或更高版本
-* **Maven**
+* **Maven**（仅使用 Maven Wrapper 启动方式时需要）
 * **MySQL**（作为目标数据库）
+
+**启动方式说明：**
+- **Maven Wrapper 方式**：会自动初始化并安装运行环境，无需手动配置
+- **JAR 包方式**：需要手动安装和配置 Java 运行环境
 
 ## 功能特点
 
@@ -118,8 +127,10 @@ MCP MySQL Server 支持通过 Groovy 脚本来扩展其功能。这些扩展可�
 
 ### 重要提示：运行带有扩展的应用
 
-为确保扩展功能（特别是依赖加载）能正确工作，请**务必使用 Maven Wrapper 通过 `spring-boot:run` 启动应用**，而不是直接通过
-`java -jar` 执行 JAR 包。这是因为直接运行 JAR 包时，扩展的类路径和依赖加载可能存在问题。
+现在两种启动方式都支持扩展功能：
+
+1. **Maven Wrapper 方式**：使用 `spring-boot:run` 启动应用
+2. **JAR 包方式**：使用 `java -jar` 启动，需要添加 `-Dloader.path` 参数指定扩展依赖目录
 
 请参考“MCP JSON 配置”部分中的推荐方式，并务必将路径替换为你项目的实际绝对路径。
 
@@ -172,12 +183,24 @@ datasource:
 ./mvnw clean package
 ```
 
-### 运行项目（推荐方式）
+### 运行项目
 
-推荐使用 Maven Wrapper 启动应用，以确保所有功能（包括扩展）正常工作：
+支持两种启动方式，两种方式没有优劣之分：
+
+#### 方式一：Maven Wrapper 启动
 
 ```bash
 ./mvnw spring-boot:run
+```
+
+#### 方式二：JAR 包启动
+
+```bash
+# 不使用扩展功能
+java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
+
+# 使用扩展功能（需要指定扩展依赖目录）
+java -Dloader.path=/path/to/your/project/src/main/resources/groovy -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
 ```
 
 ### 运行项目并指定自定义数据源配置
@@ -207,13 +230,9 @@ datasource:
 }
 ```
 
-### 使用 JAR 包运行（该方式不支持扩展）
+### JAR 包启动的 MCP JSON 配置
 
-```bash
-java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
-```
-
-对应的 MCP JSON 配置如下：
+#### 不使用扩展功能
 
 ```json
 {
@@ -221,6 +240,23 @@ java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
     "mcp-mysql-server": {
       "command": "java",
       "args": [
+        "-jar",
+        "/your-path/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+      ]
+    }
+  }
+}
+```
+
+#### 使用扩展功能
+
+```json
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "java",
+      "args": [
+        "-Dloader.path=/your-path/src/main/resources/groovy",
         "-jar",
         "/your-path/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
       ]

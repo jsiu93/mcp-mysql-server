@@ -9,7 +9,6 @@ import org.springframework.util.CollectionUtils;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,9 +17,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -63,27 +60,78 @@ public class GroovyService {
         String scriptPath = groovyBasePath + "/script/" + extension.getMainFileName();
         String jarPathDir = groovyBasePath + "/dependency/";
 
-        log.info("the script path is: {} and the jar path is: {}", scriptPath, jarPathDir);
+        log.info("Loading Groovy script from path: {} for extension: {}", scriptPath, extensionName);
 
+        try {
+            // 检查依赖是否已通过 PropertiesLauncher 加载到 classpath
+            boolean dependenciesAvailable = checkDependenciesInClasspath(extension);
+            if (dependenciesAvailable) {
+                log.info("Dependencies already loaded in classpath via PropertiesLauncher for extension: {}", extensionName);
+                // 使用默认的 ScriptEngineManager，依赖已通过 PropertiesLauncher 加载
+                ScriptEngineManager scriptEngineManager = new ScriptEngineManager();
+                log.info("Using default ScriptEngineManager with classpath dependencies for extension: {}", extensionName);
+                return executeGroovyScriptWithEngine(extension, extensionName, scriptEngineManager, input);
+            } else {
+                log.warn("Dependencies not found in classpath for extension: {}, attempting dynamic loading", extensionName);
+                return loadWithDynamicClassLoader(extension, extensionName, jarPathDir, input);
+            }
+
+        } catch (Exception e) {
+            log.error("An unexpected error occurred while executing Groovy script '{}': {}", extension.getScriptPath(), e.getMessage(), e);
+            throw new RuntimeException("An unexpected error occurred: " + e.getMessage(), e);
+        }
+    }
+
+    public List<Extension> getAllExtensions() {
+        return extensionConfig.getExtensions();
+    }
+
+    /**
+     * 检查扩展的依赖是否已在 classpath 中可用
+     * 通过尝试加载已知的依赖类来验证
+     */
+    private boolean checkDependenciesInClasspath(Extension extension) {
+        // 对于 zstdDecode 扩展，检查 zstd-jni 库是否可用
+        if ("zstdDecode".equals(extension.getName())) {
+            try {
+                Class.forName("com.github.luben.zstd.Zstd");
+                log.info("Zstd dependency found in classpath for extension: {}", extension.getName());
+                return true;
+            } catch (ClassNotFoundException e) {
+                log.error("Zstd dependency not found in classpath for extension: {}", extension.getName());
+                return false;
+            }
+        }
+
+        // 对于其他扩展，可以添加相应的检查逻辑
+        // 或者通过扫描 dependency 目录来动态检查
+        return true; // 默认假设依赖已加载
+    }
+
+    /**
+     * 使用动态类加载器加载依赖（后备方案）
+     */
+    private Object loadWithDynamicClassLoader(Extension extension, String extensionName, String jarPathDir, String input) {
         URLClassLoader customClassLoader = null;
         ClassLoader originalContextClassLoader = Thread.currentThread().getContextClassLoader();
 
         try {
             URL resource = GroovyService.class.getClassLoader().getResource(jarPathDir);
             List<URL> jarUrls = new ArrayList<>();
-            log.info("jarDirUrl: {}", resource);
+            log.info("Attempting dynamic loading for jarDirUrl: {}", resource);
 
             if (resource == null) {
+                log.warn("Dependency directory not found: {}", jarPathDir);
                 return null;
             }
 
             String protocol = resource.getProtocol();
 
             if ("file".equals(protocol)) {
-                log.info("从文件系统加载依赖: 扩展名={}", extensionName);
-                // Handle file system resources (development mode)
+                log.info("Loading dependencies from file system for extension: {}", extensionName);
                 File dependencyDir = new File(resource.toURI());
                 if (!(dependencyDir.exists() && dependencyDir.isDirectory())) {
+                    log.warn("Dependency directory does not exist: {}", dependencyDir.getAbsolutePath());
                     return null;
                 }
 
@@ -101,44 +149,11 @@ public class GroovyService {
                             .filter(Objects::nonNull)
                             .toList();
 
-                    log.info("找到{}个依赖JAR包，扩展名: {}, 文件列表: {}", jarUrls.size(), extensionName, jarUrls.stream().map(URL::toString).toList());
+                    log.info("Found {} dependency JARs for extension: {}, files: {}",
+                            jarUrls.size(), extensionName,
+                            jarUrls.stream().map(URL::toString).toList());
                 }
-
             }
-
-            // FIXME 目前如果是jar包的方式加载依赖，暂时不支持。无法成功加载jar包，后续需要解决。如需要使用扩展，需要使用文件的方式加载。（如：/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw -f /Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml spring-boot:run）
-/*            if (protocol.startsWith("jar")) {
-                // 从所有扩展中查找指定的扩展
-                log.info("从打包的JAR文件中加载依赖: 扩展名={}", extensionName);
-
-                // 尝试在目录下搜索所有.jar文件
-                try {
-                    JarURLConnection jarUrlConnection = (JarURLConnection) resource.openConnection();
-                    log.info("jarUrlConnection {}", jarUrlConnection);
-
-                    // 获取JAR文件的URL
-                    jarUrls = jarUrlConnection.getJarFile().stream()
-                            .filter(entry -> entry.getName().endsWith(".jar"))
-                            .map(jarEntry -> {
-                                log.info("jarEntry {}", jarEntry);
-
-                                URL url;
-                                try {
-                                    url = URI.create("jar:" + jarUrlConnection.getJarFileURL() + "!/" + jarEntry.getName()).toURL();
-                                } catch (MalformedURLException e) {
-                                    log.error("Error creating URL for JAR entry: {}", jarEntry.getName(), e);
-                                    throw new RuntimeException(e);
-                                }
-                                log.info("jarEntry url {}", url);
-                                return url;
-                            })
-                            .toList();
-
-                } catch (Exception e) {
-                    log.error("搜索JAR依赖时出错: {}", e.getMessage(), e);
-                }
-            }*/
-
 
             ScriptEngineManager scriptEngineManager;
             if (!CollectionUtils.isEmpty(jarUrls)) {
@@ -146,13 +161,39 @@ public class GroovyService {
                 Thread.currentThread().setContextClassLoader(customClassLoader);
                 log.info("Custom classloader created with {} JARs for extension: {}", jarUrls.size(), extensionName);
 
-                // 创建使用自定义类加载器的ScriptEngineManager
                 scriptEngineManager = new ScriptEngineManager(customClassLoader);
-                log.info("Created ScriptEngineManager with custom classloader");
+                log.info("Created ScriptEngineManager with custom classloader for extension: {}", extensionName);
             } else {
-                log.info("No dependency JARs found or loaded for extension: {}", extensionName);
+                log.info("No dependency JARs found for extension: {}, using default ScriptEngineManager", extensionName);
                 scriptEngineManager = new ScriptEngineManager();
             }
+
+            // 执行脚本逻辑
+            return executeGroovyScriptWithEngine(extension, extensionName, scriptEngineManager, input);
+
+        } catch (Exception e) {
+            log.error("Error in dynamic class loading for extension: {}", extensionName, e);
+            return null;
+        } finally {
+            // 恢复原始的上下文类加载器
+            Thread.currentThread().setContextClassLoader(originalContextClassLoader);
+            if (customClassLoader != null) {
+                try {
+                    customClassLoader.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close custom class loader for extension: {}", extensionName, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 执行 Groovy 脚本的核心逻辑
+     */
+    private Object executeGroovyScriptWithEngine(Extension extension, String extensionName, ScriptEngineManager scriptEngineManager, String input) {
+        try {
+            String groovyBasePath = "groovy/" + extension.getName();
+            String scriptPath = groovyBasePath + "/script/" + extension.getMainFileName();
 
             ScriptEngine groovyEngine = scriptEngineManager.getEngineByName("groovy");
 
@@ -178,40 +219,9 @@ public class GroovyService {
             log.info("Groovy script executed successfully for extension: {}", extensionName);
             return result;
 
-        } catch (ScriptException e) {
-            log.error("Error executing Groovy script '{}': {}", extension.getScriptPath(), e.getMessage(), e);
-            throw new RuntimeException("Error executing Groovy script: " + e.getMessage(), e);
-        } catch (IOException e) {
-            log.error("Error reading Groovy script '{}' or loading JARs: {}", extension.getScriptPath(), e.getMessage(), e);
-            throw new RuntimeException("Error reading Groovy script or loading JARs: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("An unexpected error occurred while executing Groovy script '{}': {}", extension.getScriptPath(), e.getMessage(), e);
-            throw new RuntimeException("An unexpected error occurred: " + e.getMessage(), e);
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalContextClassLoader);
-            if (customClassLoader != null) {
-                try {
-                    customClassLoader.close();
-                    log.info("Custom classloader closed for extension: {}", extensionName);
-                } catch (IOException e) {
-                    log.warn("Error closing custom classloader for extension: {}: {}", extensionName, e.getMessage(), e);
-                }
-            }
+            log.error("Error executing Groovy script for extension: {}", extensionName, e);
+            throw new RuntimeException("Error executing Groovy script: " + e.getMessage(), e);
         }
-    }
-
-    public List<Extension> getAllExtensions() {
-        return extensionConfig.getExtensions();
-    }
-
-
-    public static void main(String[] args) {
-        record Employee(String id, String name) {}
-
-        Employee alice = new Employee("1", "Alice");
-
-        Map<Employee, Integer> employeeSalary = new HashMap<>();
-        employeeSalary.put(new Employee("1", "Alice"), 5000);
-        System.out.println(employeeSalary.get(new Employee("1", "Alice"))); // 输出: 5000
     }
 }

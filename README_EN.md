@@ -8,7 +8,7 @@ A Spring AI-based MCP capable of executing any SQL query.
 
 ### 1\. MCP JSON Configuration
 
-#### Recommended Method (Maven Wrapper)
+#### Method 1: Maven Wrapper Startup
 
 ```json
 {
@@ -26,7 +26,7 @@ A Spring AI-based MCP capable of executing any SQL query.
 }
 ```
 
-#### JAR Package Method (Optional, extensions not supported)
+#### Method 2: JAR Package Startup
 
 ```json
 {
@@ -34,13 +34,18 @@ A Spring AI-based MCP capable of executing any SQL query.
     "mcp-mysql-server": {
       "command": "java",
       "args": [
+        "-Dloader.path=/Users/xin.y/IdeaProjects/mcp-mysql-server/src/main/resources/groovy",
         "-jar",
-        "/Users/yangxin/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+        "/Users/xin.y/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
       ]
     }
   }
 }
 ```
+
+**Note:**
+- The `-Dloader.path` parameter is optional and only needed when running extensions, used to specify the directory for extension jar dependencies
+- If not using extension features, the `-Dloader.path` parameter can be omitted
 
 ### 2\. Data Source Configuration (Minimal Configuration)
 
@@ -77,8 +82,12 @@ extensions:
 Before running, please ensure your environment meets the following conditions:
 
 * **JDK 21** or higher
-* **Maven**
+* **Maven** (only required for Maven Wrapper startup method)
 * **MySQL** (as the target database)
+
+**Startup Method Notes:**
+- **Maven Wrapper Method**: Automatically initializes and installs the runtime environment, no manual configuration required
+- **JAR Package Method**: Requires manual installation and configuration of Java runtime environment
 
 ## Features
 
@@ -117,10 +126,12 @@ Extensions are configured through the `src/main/resources/extension.yml` file. T
 
 ### Important Note: Running Applications with Extensions
 
-To ensure that extension functionality (especially dependency loading) works correctly, please **be sure to use Maven Wrapper with `spring-boot:run` to start the application** rather than directly executing the JAR package via 
-`java -jar`. This is because when running the JAR package directly, there may be issues with the extension's classpath and dependency loading.
+Both startup methods now support extension functionality:
 
-Please refer to the recommended method in the "MCP JSON Configuration" section, and be sure to replace the paths with the actual absolute paths of your project.
+1. **Maven Wrapper Method**: Start the application using `spring-boot:run`
+2. **JAR Package Method**: Start using `java -jar`, requires adding the `-Dloader.path` parameter to specify the extension dependency directory
+
+Please refer to both methods in the "MCP JSON Configuration" section, and be sure to replace the paths with the actual absolute paths of your project.
 
 -----
 
@@ -171,12 +182,24 @@ Execute the following command in the project root directory to compile and packa
 ./mvnw clean package
 ```
 
-### Run the Project (Recommended Method)
+### Run the Project
 
-It is recommended to use Maven Wrapper to start the application to ensure all functionality (including extensions) works properly:
+Two startup methods are supported, both methods are equally good:
+
+#### Method 1: Maven Wrapper Startup
 
 ```bash
 ./mvnw spring-boot:run
+```
+
+#### Method 2: JAR Package Startup
+
+```bash
+# Without extension features
+java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
+
+# With extension features (need to specify extension dependency directory)
+java -Dloader.path=/path/to/your/project/src/main/resources/groovy -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
 ```
 
 ### Run the Project with a Custom Data Source Configuration
@@ -205,13 +228,9 @@ The corresponding MCP JSON configuration is as follows:
 }
 ```
 
-### Run Using JAR Package (This method does not support extensions)
+### JAR Package Startup MCP JSON Configuration
 
-```bash
-java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar
-```
-
-The corresponding MCP JSON configuration is as follows:
+#### Without Extension Features
 
 ```json
 {
@@ -219,6 +238,23 @@ The corresponding MCP JSON configuration is as follows:
     "mcp-mysql-server": {
       "command": "java",
       "args": [
+        "-jar",
+        "/your-path/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
+      ]
+    }
+  }
+}
+```
+
+#### With Extension Features
+
+```json
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "java",
+      "args": [
+        "-Dloader.path=/your-path/src/main/resources/groovy",
         "-jar",
         "/your-path/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
       ]
