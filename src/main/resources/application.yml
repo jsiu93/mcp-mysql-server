@@ -14,7 +14,6 @@ spring:
 server:
   port: 9433
 logging:
-  config: classpath:logback-spring.xml
   file:
     name: logs/mcp-server.log
   level:
