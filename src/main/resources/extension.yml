@@ -13,3 +13,6 @@ extensions:
   - name: zstdDecode
     description: "解码业务快照数据"
     prompt: "decode the snapshot_data from the table core_snapshot or encrypted data of com.github.luben.zstd"
+  - name: SM4Decrypt
+    description: "SM4国密算法解密工具，支持单个字符串或批量解密，返回详细的解密结果和状态信息"
+    prompt: "使用SM4国密算法解密Base64编码的加密数据。支持多种输入格式：1) 单个加密字符串 2) JSON数组：[\"encrypted1\",\"encrypted2\"] 3) 逗号分隔：encrypted1,encrypted2。返回包含原文、密文、解密状态的详细JSON结果"

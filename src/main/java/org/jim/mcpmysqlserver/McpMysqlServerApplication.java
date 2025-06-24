@@ -5,10 +5,12 @@ import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
+import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
 import org.jim.mcpmysqlserver.util.PortUtils;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -170,6 +172,15 @@ public class McpMysqlServerApplication {
     public BiConsumer<McpSyncServerExchange, List<McpSchema.Root>> rootsChangeHandler() {
         return (exchange, roots) -> {
             //log.info("Registering root resources: {}", roots);
+        };
+    }
+
+    @Bean
+    public ApplicationRunner extensionInfoLogger(GroovyService groovyService) {
+        return args -> {
+            log.info("=== Extension Information ===");
+            groovyService.getAllExtensions();
+            log.info("=== Extension Information End ===");
         };
     }
 

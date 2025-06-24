@@ -72,7 +72,7 @@ public class GroovyService {
                 log.info("Using default ScriptEngineManager with classpath dependencies for extension: {}", extensionName);
                 return executeGroovyScriptWithEngine(extension, extensionName, scriptEngineManager, input);
             } else {
-                log.warn("Dependencies not found in classpath for extension: {}, attempting dynamic loading", extensionName);
+                log.info("Dependencies not found in classpath for extension: {}, attempting dynamic loading", extensionName);
                 return loadWithDynamicClassLoader(extension, extensionName, jarPathDir, input);
             }
 
@@ -83,7 +83,13 @@ public class GroovyService {
     }
 
     public List<Extension> getAllExtensions() {
-        return extensionConfig.getExtensions();
+        List<Extension> extensions = extensionConfig.getExtensions();
+        log.info("Loaded extensions count: {}", extensions != null ? extensions.size() : 0);
+        if (extensions != null) {
+            extensions.forEach(ext -> log.info("Extension loaded: name={}, enabled={}, description={}",
+                ext.getName(), ext.getEnabled(), ext.getDescription()));
+        }
+        return extensions;
     }
 
     /**
@@ -99,6 +105,18 @@ public class GroovyService {
                 return true;
             } catch (ClassNotFoundException e) {
                 log.error("Zstd dependency not found in classpath for extension: {}", extension.getName());
+                return false;
+            }
+        }
+
+        // 对于 SM4Decrypt 扩展，检查 BouncyCastle 库是否可用（hutool SM4 的关键依赖）
+        if ("SM4Decrypt".equals(extension.getName())) {
+            try {
+                Class.forName("org.bouncycastle.crypto.Digest");
+                log.info("BouncyCastle dependency found in classpath for extension: {}", extension.getName());
+                return true;
+            } catch (ClassNotFoundException e) {
+                log.error("BouncyCastle dependency not found in classpath for extension: {}, attempting dynamic loading", extension.getName());
                 return false;
             }
         }
