@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
@@ -170,6 +171,35 @@ public class MysqlOptionService {
         result.put("default", defaultDataSourceName);
 
         return result;
+    }
+
+    /**
+     * 在默认数据源上执行SQL语句，适用于用户未明确指定数据源的情况
+     * 该工具是executeSql和executeSqlWithDataSource的轻量级替代方案，仅查询标记为default的数据源
+     * <p>
+     * 重要提示：返回的查询结果可能包含加密、编码或其他需要处理的数据字段。如果发现数据看起来像是加密的、编码的或需要特殊处理的（如Base64、十六进制字符串、密文等），
+     * 请主动调用getAllExtensions()查看可用的数据处理扩展工具，然后使用executeGroovyScript()调用相应的解密、解码或数据转换扩展来处理这些字段。
+     * 常见需要处理的数据类型包括：加密字段、Base64编码、URL编码、JSON字符串、时间戳转换等。
+     *
+     * @param sql 要执行的SQL语句
+     * @return 默认数据源的查询结果，格式为 {"defaultDataSourceName": result}
+     */
+    @Tool(description = "Executes a SQL query on the default MySQL datasource only. Use this when user hasn't specified a particular environment or datasource. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    public Map<String, Object> executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
+        log.info("Executing SQL on default datasource: {}", sql);
+
+        // 获取默认数据源名称
+        String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
+        if (StringUtils.isBlank(defaultDataSourceName)) {
+            String errorMsg = "No default datasource configured";
+            log.error(errorMsg);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", errorMsg);
+            return errorResult;
+        }
+
+        // 复用executeSqlWithDataSource的逻辑
+        return executeSqlWithDataSource(defaultDataSourceName, sql);
     }
 
     /**
