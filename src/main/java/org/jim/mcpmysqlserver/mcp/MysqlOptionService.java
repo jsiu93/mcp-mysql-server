@@ -3,7 +3,6 @@ package org.jim.mcpmysqlserver.mcp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +14,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -71,7 +71,7 @@ public class MysqlOptionService {
      * @param sql 要执行的SQL语句
      * @return 所有成功的数据源的查询结果，格式为 {"datasourceName": result, ...}
      */
-    @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Note: This tool has the highest priority and will not be called if user explicitly requests a single-datasource operation. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Priority: lower than executeSqlOnDefault. Call this only when the user explicitly asks to query all environments/datasources, or when executeSqlOnDefault returns no data. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
     public Map<String, Object> executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
@@ -159,7 +159,7 @@ public class MysqlOptionService {
      * 获取所有可用的数据源名称
      * @return 数据源名称列表和默认数据源名称
      */
-    @Tool(description = "Lists all available MySQL datasource names. Returns JSON with 'datasources' array and 'default' datasource name. Use this before executeSqlWithDataSource to identify available datasources.")
+    @Tool(description = "Lists all available MySQL datasource names. Returns JSON with 'datasources' array and 'default' datasource name. Use this before executeSqlWithDataSource to identify available datasources. Not required when using executeSqlOnDefault.")
     public Map<String, Object> listDataSources() {
         log.info("Listing all available datasources");
 
@@ -184,8 +184,8 @@ public class MysqlOptionService {
      * @param sql 要执行的SQL语句
      * @return 默认数据源的查询结果，格式为 {"defaultDataSourceName": result}
      */
-    @Tool(description = "Executes a SQL query on the default MySQL datasource only. Use this when user hasn't specified a particular environment or datasource. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
-    public Map<String, Object> executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
+    @Tool(description = "Executes a SQL query on the default MySQL datasource only. Priority: highest when the user hasn't specified an environment or datasource. The model should call this tool first; if it returns no data (empty result), then fall back to executeSql. This tool does not require calling listDataSources. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    public Object executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on default datasource: {}", sql);
 
         // 获取默认数据源名称
@@ -198,8 +198,12 @@ public class MysqlOptionService {
             return errorResult;
         }
 
-        // 复用executeSqlWithDataSource的逻辑
-        return executeSqlWithDataSource(defaultDataSourceName, sql);
+        Map<String, Object> stringObjectMap = executeSqlWithDataSource(defaultDataSourceName, sql);
+        if (CollectionUtils.isEmpty(stringObjectMap)) {
+            return stringObjectMap;
+        }
+
+        return stringObjectMap.get(defaultDataSourceName);
     }
 
     /**
@@ -272,7 +276,7 @@ public class MysqlOptionService {
      */
     @Tool(description = "Processes input text using a named Groovy script extension. First use getAllExtensions to identify available extensions.", returnDirect = true)
     public JsonNode executeGroovyScript(@ToolParam(description = "Extension name (must match an extension from getAllExtensions)") String extensionName,
-                                      @ToolParam(description = "Input text to be processed by the Groovy script.(Please breathe deeply, relax your body and mind. This parameter is very important, please input it carefully and do not miss any details.)") String input) {
+                                        @ToolParam(description = "Input text to be processed by the Groovy script.(Please breathe deeply, relax your body and mind. This parameter is very important, please input it carefully and do not miss any details.)") String input) {
         // 执行脚本
         Object o = groovyService.executeGroovyScript(extensionName, input);
         if (o instanceof String) {
