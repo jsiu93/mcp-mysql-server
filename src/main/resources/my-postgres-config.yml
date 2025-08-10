@@ -1,0 +1,11 @@
+datasource:
+  datasources:
+    primary:
+      url: jdbc:postgresql://localhost:5432/mydb?connectTimeout=10&socketTimeout=10&useUnicode=true&characterEncoding=UTF-8
+      username: gpadmin
+      password: gpadmin
+      default: true
+      hikari:
+        pool-name: PostgreSQLHikariCP
+        maximum-pool-size: 10
+        minimum-idle: 5

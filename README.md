@@ -138,6 +138,17 @@ MCP MySQL Server 支持通过 Groovy 脚本来扩展其功能。这些扩展可�
 
 ## 数据源配置
 
+### 支持的数据库类型
+
+本项目支持多种数据库类型，包括：
+- **MySQL** - 使用 `com.mysql.cj.jdbc.Driver` 驱动
+- **PostgreSQL** - 使用 `org.postgresql.Driver` 驱动
+- **Oracle** - 使用 `oracle.jdbc.OracleDriver` 驱动
+- **SQL Server** - 使用 `com.microsoft.sqlserver.jdbc.SQLServerDriver` 驱动
+- **H2** - 使用 `org.h2.Driver` 驱动
+
+系统会根据数据库URL自动检测并设置正确的驱动程序，用户无需手动指定驱动类名。
+
 ### 默认配置
 
 应用默认使用 `src/main/resources/datasource.yml` 中的数据源配置。
@@ -152,24 +163,53 @@ MCP MySQL Server 支持通过 Groovy 脚本来扩展其功能。这些扩展可�
 
 ### 配置文件格式
 
-数据源配置文件采用 YAML 格式，示例如下：
+数据源配置文件采用 YAML 格式，支持混合配置多种数据库类型：
 
+#### MySQL配置示例
 ```yaml
 datasource:
   datasources:
-    # 第一个数据源示例
-    your_db1_name:
-      url: jdbc:mysql://localhost:3306/db1
+    mysql_db:
+      url: jdbc:mysql://localhost:3306/db1?connectTimeout=10000&socketTimeout=10000&useUnicode=true&characterEncoding=UTF-8&useTimezone=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
       username: root
       password: password
-      default: true  # 标记为默认数据源，如果未标记，则默认使用第一个
-
-    # 第二个数据源示例
-    your_db2_name:
-      url: jdbc:mysql://localhost:3306/db2
-      username: root
-      password: password
+      default: true  # 标记为默认数据源
 ```
+
+#### PostgreSQL配置示例
+```yaml
+datasource:
+  datasources:
+    postgres_db:
+      url: jdbc:postgresql://localhost:5432/mydb?connectTimeout=10&socketTimeout=10&useUnicode=true&characterEncoding=UTF-8
+      username: postgres
+      password: password
+      default: true  # 标记为默认数据源
+```
+
+#### 混合配置示例
+```yaml
+datasource:
+  datasources:
+    # MySQL数据源
+    mysql_primary:
+      url: jdbc:mysql://localhost:3306/mysql_db
+      username: root
+      password: mysql_password
+      default: true
+
+    # PostgreSQL数据源
+    postgres_secondary:
+      url: jdbc:postgresql://localhost:5432/postgres_db
+      username: postgres
+      password: postgres_password
+```
+
+### 配置文件示例
+
+项目提供了多个配置文件示例：
+- `datasource-example.yml` - MySQL和PostgreSQL混合配置示例
+- `datasource-postgresql-example.yml` - 纯PostgreSQL配置示例
 
 -----
 

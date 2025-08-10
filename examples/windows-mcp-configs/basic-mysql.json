@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\mvnw.cmd",
+      "args": [
+        "-q",
+        "-f",
+        "C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\pom.xml",
+        "spring-boot:run"
+      ]
+    }
+  }
+}

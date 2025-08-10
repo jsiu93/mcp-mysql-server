@@ -12,7 +12,7 @@
     <artifactId>mcp-mysql-server</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>mcp-mysql-server</name>
-    <description>mcp-mysql-server</description>
+    <description>MCP Database Server - 支持MySQL、PostgreSQL等多种数据库的MCP服务器</description>
     <url/>
     <licenses>
         <license/>
@@ -72,6 +72,11 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>

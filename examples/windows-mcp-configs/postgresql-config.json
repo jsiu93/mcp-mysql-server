@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\mvnw.cmd",
+      "args": [
+        "-q",
+        "-Dspring-boot.run.arguments=--datasource.config=C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\src\\main\\resources\\datasource-postgresql-example.yml",
+        "-f",
+        "C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\pom.xml",
+        "spring-boot:run"
+      ]
+    }
+  }
+}

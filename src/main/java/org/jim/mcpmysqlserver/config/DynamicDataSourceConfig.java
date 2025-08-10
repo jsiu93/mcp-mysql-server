@@ -3,6 +3,7 @@ package org.jim.mcpmysqlserver.config;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.jim.mcpmysqlserver.util.DatabaseTypeDetector;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -93,8 +94,11 @@ public class DynamicDataSourceConfig {
 
             // 设置默认驱动类名，如果用户没有配置
             if (!dsProperties.containsKey("driver-class-name")) {
-                dsProperties.put("driver-class-name", "com.mysql.cj.jdbc.Driver");
-                log.info("Using default driver-class-name: com.mysql.cj.jdbc.Driver for datasource {}", dsName);
+                String url = (String) dsProperties.get("url");
+                String driverClassName = DatabaseTypeDetector.getDriverClassName(url);
+                String dbType = DatabaseTypeDetector.getDatabaseDisplayName(url);
+                dsProperties.put("driver-class-name", driverClassName);
+                log.info("为数据源 [{}] 自动检测到数据库类型: {}，使用驱动: {}", dsName, dbType, driverClassName);
             }
 
             // 创建数据源属性
@@ -133,4 +137,6 @@ public class DynamicDataSourceConfig {
             throw e;
         }
     }
+
+
 }

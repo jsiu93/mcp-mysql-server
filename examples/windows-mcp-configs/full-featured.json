@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcp-mysql-server": {
+      "command": "java",
+      "args": [
+        "-Dloader.path=C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\src\\main\\resources\\groovy",
+        "-jar",
+        "C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\target\\mcp-mysql-server-0.0.1-SNAPSHOT.jar",
+        "--datasource.config=C:\\Users\\YourUsername\\mcp\\mcp-mysql-server\\my-production-config.yml"
+      ]
+    }
+  }
+}

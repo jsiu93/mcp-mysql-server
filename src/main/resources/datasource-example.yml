@@ -28,8 +28,25 @@ datasource:
         maximum-pool-size: 5
         minimum-idle: 2
 
+    # PostgreSQL数据源示例
+    postgres_db:
+      url: jdbc:postgresql://localhost:5432/postgres_db?connectTimeout=10&socketTimeout=10&useUnicode=true&characterEncoding=UTF-8
+      username: postgres
+      password: postgres_password
+      # 以下是可选配置，用户可以不配置
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        pool-name: PostgreSQLHikariCP
+        maximum-pool-size: 8
+        minimum-idle: 3
+
     # 可以添加更多数据源
     # db3:
     #   url: jdbc:mysql://localhost:3306/db3
     #   username: user3
     #   password: pass3
+    #   # 可选配置
+    #   driver-class-name: com.mysql.cj.jdbc.Driver
+    #   hikari:
+    #     maximum-pool-size: 3
+    #     minimum-idle: 1
