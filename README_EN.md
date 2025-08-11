@@ -28,6 +28,14 @@ A Spring AI-based MCP capable of executing any SQL query.
 
 #### Method 2: JAR Package Startup
 
+Build the JAR package
+
+```bash
+./mvnw clean package
+```
+
+Configure the MCP server
+
 ```json
 {
   "mcpServers": {
@@ -59,34 +67,24 @@ datasource:
       default: true  # Mark as default data source
 ```
 
-### 3. Start Service
-
-```bash
-# Build project
-./mvnw clean package
-
-# Start service
-./mvnw spring-boot:run
-```
+---
 
 ## Features
 
-- **🚀 Unrestricted SQL Execution** - Support for executing any SQL statement
-- **🔗 Multiple Data Source Support** - Configure and manage multiple database data sources
-- **⚡ Dynamic Data Source Switching** - Switch between different data sources at runtime
-- **🛠️ Extension Features** - Extend functionality through Groovy scripts
-- **🔒 SQL Security Control** - Prevent AI models from executing dangerous SQL operations
+- **Multiple Data Source Support** - Configure and manage multiple database data sources
+- **Dynamic Data Source Switching** - Switch between different data sources at runtime
+- **Extension Features** - Extend functionality through Groovy scripts
+- **SQL Security Control** - Prevent AI models from executing dangerous SQL operations
 
 ## Detailed Documentation
 
-| Document | Description |
-|:---------|:------------|
-| [Extensions Documentation](EXTENSIONS_EN.md) | Detailed configuration and development guide for Groovy script extensions |
+| Document                                                    | Description                                                                         |
+|:------------------------------------------------------------|:------------------------------------------------------------------------------------|
+| [Extensions Documentation](EXTENSIONS_EN.md)                | Detailed configuration and development guide for Groovy script extensions           |
 | [Data Source Configuration Documentation](DATASOURCE_EN.md) | Detailed data source configuration, multi-environment management and best practices |
-| [SQL Security Control Documentation](SQL_SECURITY_EN.md) | Configuration and management of SQL security policies |
+| [SQL Security Control Documentation](SQL_SECURITY_EN.md)    | Configuration and management of SQL security policies                               |
 
 ## Environment Requirements
 
 - **JDK 21** or higher
-- **MySQL** database
-- **Maven** (only required for Maven Wrapper startup method)
+- **Maven 3.6** or higher
