@@ -13,6 +13,38 @@ spring:
     banner-mode: off
 server:
   port: 9433
+
+# SQL安全控制配置
+sql:
+  security:
+    # 是否启用SQL安全检查
+    enabled: true
+    # 危险操作关键字配置（不区分大小写）
+    dangerous-keywords:
+      # DML危险操作
+      - update
+      - delete
+      - insert
+      - replace
+      # DDL危险操作
+      - drop
+      - create
+      - alter
+      - truncate
+      # DCL危险操作
+      - grant
+      - revoke
+      # 系统操作
+      - shutdown
+      - restart
+      # 存储过程相关
+      - call
+      - execute
+      # 事务控制
+      - commit
+      - rollback
+      # 用户自定义危险关键字可在此添加
+      # - custom_keyword
 logging:
   file:
     name: logs/mcp-server.log

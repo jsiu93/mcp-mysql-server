@@ -10,9 +10,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
+import org.jim.mcpmysqlserver.validator.SqlSecurityValidator;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -42,18 +42,18 @@ public class MysqlOptionService {
 
     private final DataSourceService dataSourceService;
     private final ObjectMapper objectMapper;
-
+    private final SqlSecurityValidator sqlSecurityValidator;
 
     @Resource
     private GroovyService groovyService;
 
-    @Autowired
-    public MysqlOptionService(DataSourceService dataSourceService) {
+    public MysqlOptionService(DataSourceService dataSourceService, SqlSecurityValidator sqlSecurityValidator) {
         this.dataSourceService = dataSourceService;
+        this.sqlSecurityValidator = sqlSecurityValidator;
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        log.info("MysqlOptionService initialized with DataSourceService");
+        log.info("MysqlOptionService initialized with DataSourceService and SqlSecurityValidator");
     }
 
 
@@ -74,6 +74,17 @@ public class MysqlOptionService {
     @Tool(description = "Executes a SQL query on all configured MySQL datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Priority: lower than executeSqlOnDefault. Call this only when the user explicitly asks to query all environments/datasources, or when executeSqlOnDefault returns no data. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
     public Map<String, Object> executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
+
+        // SQL安全验证
+        SqlSecurityValidator.SqlValidationResult validationResult = sqlSecurityValidator.validateSql(sql);
+        if (!validationResult.valid()) {
+            log.warn("SQL validation failed: {}", validationResult.errorMessage());
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", validationResult.errorMessage());
+            errorResult.put("detected_keyword", validationResult.detectedKeyword());
+            errorResult.put("sql_security_enabled", true);
+            return errorResult;
+        }
 
         // 获取所有可用的数据源名称
         List<String> dataSourceNames = dataSourceService.getDataSourceNames();
@@ -188,6 +199,17 @@ public class MysqlOptionService {
     public Object executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on default datasource: {}", sql);
 
+        // SQL安全验证
+        SqlSecurityValidator.SqlValidationResult validationResult = sqlSecurityValidator.validateSql(sql);
+        if (!validationResult.valid()) {
+            log.warn("SQL validation failed: {}", validationResult.errorMessage());
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", validationResult.errorMessage());
+            errorResult.put("detected_keyword", validationResult.detectedKeyword());
+            errorResult.put("sql_security_enabled", true);
+            return errorResult;
+        }
+
         // 获取默认数据源名称
         String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
         if (StringUtils.isBlank(defaultDataSourceName)) {
@@ -224,6 +246,19 @@ public class MysqlOptionService {
     public Map<String, Object> executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
                                                         @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
+
+        // SQL安全验证
+        SqlSecurityValidator.SqlValidationResult validationResult = sqlSecurityValidator.validateSql(sql);
+        if (!validationResult.valid()) {
+            log.warn("SQL validation failed: {}", validationResult.errorMessage());
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put(dataSourceName, Map.of(
+                "error", validationResult.errorMessage(),
+                "detected_keyword", validationResult.detectedKeyword(),
+                "sql_security_enabled", true
+            ));
+            return errorResult;
+        }
 
         // 存储查询结果
         Map<String, Object> result = new HashMap<>();

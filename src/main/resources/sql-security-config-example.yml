@@ -1,0 +1,87 @@
+# SQL安全控制配置示例
+# 用户可以根据需要修改application.yml中的sql.security配置
+
+sql:
+  security:
+    # 是否启用SQL安全检查
+    # true: 启用安全检查（推荐用于生产环境）
+    # false: 禁用安全检查（适用于开发/测试环境）
+    enabled: true
+    
+    # 危险操作关键字配置（不区分大小写）
+    # 用户可以根据需要添加或移除关键字
+    dangerous-keywords:
+      # DML危险操作 - 数据修改语句
+      - update      # UPDATE语句
+      - delete      # DELETE语句  
+      - insert      # INSERT语句
+      - replace     # REPLACE语句
+      
+      # DDL危险操作 - 结构修改语句
+      - drop        # DROP语句（删除表、数据库等）
+      - create      # CREATE语句（创建表、数据库等）
+      - alter       # ALTER语句（修改表结构）
+      - truncate    # TRUNCATE语句（清空表）
+      
+      # DCL危险操作 - 权限控制语句
+      - grant       # GRANT语句（授权）
+      - revoke      # REVOKE语句（撤销权限）
+      
+      # 系统操作
+      - shutdown    # 关闭服务器
+      - restart     # 重启服务器
+      
+      # 存储过程相关
+      - call        # CALL语句（调用存储过程）
+      - execute     # EXECUTE语句
+      
+      # 事务控制
+      - commit      # COMMIT语句（提交事务）
+      - rollback    # ROLLBACK语句（回滚事务）
+      
+      # 用户自定义危险关键字
+      # 可以在此添加其他需要禁止的关键字
+      # 例如：
+      # - load        # LOAD DATA语句
+      # - outfile     # INTO OUTFILE语句
+      # - dumpfile    # INTO DUMPFILE语句
+
+# 使用说明：
+# 1. 要完全禁用SQL安全检查，设置 enabled: false
+# 2. 要允许特定操作，从 dangerous-keywords 列表中移除对应关键字
+# 3. 要禁止额外操作，在 dangerous-keywords 列表中添加新关键字
+# 4. 修改配置后需要重启服务
+# 5. 关键字匹配不区分大小写，但会匹配完整单词（避免误匹配）
+
+# 配置示例场景：
+# 
+# 场景1：开发环境（允许所有操作）
+# sql:
+#   security:
+#     enabled: false
+#
+# 场景2：测试环境（允许查询和插入，禁止删除和修改结构）
+# sql:
+#   security:
+#     enabled: true
+#     dangerous-keywords:
+#       - delete
+#       - drop
+#       - alter
+#       - truncate
+#
+# 场景3：生产环境只读（只允许查询）
+# sql:
+#   security:
+#     enabled: true
+#     dangerous-keywords:
+#       - update
+#       - delete
+#       - insert
+#       - replace
+#       - drop
+#       - create
+#       - alter
+#       - truncate
+#       - grant
+#       - revoke
