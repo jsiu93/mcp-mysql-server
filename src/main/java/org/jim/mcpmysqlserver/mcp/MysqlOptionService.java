@@ -10,27 +10,24 @@ import org.apache.commons.lang3.StringUtils;
 import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
+import org.jim.mcpmysqlserver.service.JdbcExecutor;
+import org.jim.mcpmysqlserver.validator.SqlSecurityValidator;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * MySQL操作服务，执行任意SQL并直接透传MySQL服务器的返回值
@@ -42,18 +39,20 @@ public class MysqlOptionService {
 
     private final DataSourceService dataSourceService;
     private final ObjectMapper objectMapper;
-
+    private final SqlSecurityValidator sqlSecurityValidator;
+    private final JdbcExecutor jdbcExecutor;
 
     @Resource
     private GroovyService groovyService;
 
-    @Autowired
-    public MysqlOptionService(DataSourceService dataSourceService) {
+    public MysqlOptionService(DataSourceService dataSourceService, SqlSecurityValidator sqlSecurityValidator, JdbcExecutor jdbcExecutor) {
         this.dataSourceService = dataSourceService;
+        this.sqlSecurityValidator = sqlSecurityValidator;
+        this.jdbcExecutor = jdbcExecutor;
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        log.info("MysqlOptionService initialized with DataSourceService");
+        log.info("MysqlOptionService initialized with DataSourceService, SqlSecurityValidator and JdbcExecutor");
     }
 
 
@@ -75,6 +74,12 @@ public class MysqlOptionService {
     public Map<String, Object> executeSql(@ToolParam(description = "Valid MySQL SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
+        // SQL安全验证
+        Map<String, Object> errorResult = validateSqlAndGetErrorResult(sql);
+        if (errorResult != null) {
+            return errorResult;
+        }
+
         // 获取所有可用的数据源名称
         List<String> dataSourceNames = dataSourceService.getDataSourceNames();
         log.info("Found {} available datasources", dataSourceNames.size());
@@ -87,8 +92,8 @@ public class MysqlOptionService {
         log.info("Created thread pool with {} threads", Math.min(5, dataSourceNames.size()));
 
         try {
-            // 创建异步任务列表
-            List<CompletableFuture<Void>> futures = dataSourceNames.stream()
+            // 等待所有任务完成
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(dataSourceNames.stream()
                     .map(dsName -> CompletableFuture.runAsync(() -> {
                         log.info("Executing SQL on datasource [{}]", dsName);
 
@@ -96,48 +101,26 @@ public class MysqlOptionService {
                         DataSource targetDataSource = dataSourceService.getDataSource(dsName);
                         if (targetDataSource == null) {
                             log.warn("Datasource [{}] not found, skipping", dsName);
-                            return; // 相当于continue
+                            return;
                         }
 
-                        try (Connection conn = targetDataSource.getConnection();
-                             Statement stmt = conn.createStatement()) {
-
-                            boolean hasResultSet = stmt.execute(sql);
-
-                            if (hasResultSet) {
-                                // 处理查询结果
-                                try (ResultSet rs = stmt.getResultSet()) {
-                                    String result = processResultSet(rs);
-                                    Object resultObj = objectMapper.readValue(result, List.class);
-                                    successResults.put(dsName, resultObj);
-                                    log.info("Query executed successfully on datasource [{}]", dsName);
-                                }
-                            } else {
-                                // 处理更新结果
-                                int updateCount = stmt.getUpdateCount();
-                                successResults.put(dsName, updateCount);
-                                log.info("SQL execution completed on datasource [{}], affected rows: {}", dsName, updateCount);
-                            }
-                        } catch (SQLException e) {
-                            log.error("SQL execution error on datasource [{}]: {}", dsName, e.getMessage(), e);
-                            // 不记录错误结果，只返回成功的结果
-                        } catch (Exception e) {
-                            log.error("Unexpected error during SQL execution on datasource [{}]: {}", dsName, e.getMessage(), e);
-                            // 不记录错误结果，只返回成功的结果
+                        // 使用JdbcExecutor执行SQL
+                        JdbcExecutor.SqlResult result = jdbcExecutor.executeSql(targetDataSource, sql);
+                        if (result.success()) {
+                            successResults.put(dsName, result.data());
+                            log.info("Query executed successfully on datasource [{}]", dsName);
+                            return;
                         }
-                    }, executor))
-                    .toList();
 
-            // 等待所有任务完成
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                        log.error("SQL execution error on datasource [{}]: {}", dsName, result.errorMessage());
+                    }, executor)).toArray(CompletableFuture[]::new)
+            );
 
             // 设置超时时间，避免长时间等待
-            try {
-                allFutures.get(60, TimeUnit.SECONDS);
-                log.info("All SQL executions completed");
-            } catch (Exception e) {
-                log.warn("Some SQL executions timed out: {}", e.getMessage());
-            }
+            allFutures.get(60, TimeUnit.SECONDS);
+
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            log.error("Error executing SQL on all datasources: {}", e.getMessage(), e);
         } finally {
             // 关闭线程池
             executor.shutdown();
@@ -188,6 +171,12 @@ public class MysqlOptionService {
     public Object executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on default datasource: {}", sql);
 
+        // SQL安全验证
+        Object errorResult1 = validateSqlAndGetErrorResult(sql);
+        if (errorResult1 != null) {
+            return errorResult1;
+        }
+
         // 获取默认数据源名称
         String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
         if (StringUtils.isBlank(defaultDataSourceName)) {
@@ -204,6 +193,20 @@ public class MysqlOptionService {
         }
 
         return stringObjectMap.get(defaultDataSourceName);
+    }
+
+    private Map<String, Object> validateSqlAndGetErrorResult(String sql) {
+        SqlSecurityValidator.SqlValidationResult validationResult = sqlSecurityValidator.validateSql(sql);
+        if (validationResult.valid()) {
+            return null;
+        }
+
+        log.warn("SQL validation failed: {}", validationResult.errorMessage());
+        Map<String, Object> errorResult = new HashMap<>();
+        errorResult.put("error", validationResult.errorMessage());
+        errorResult.put("detected_keyword", validationResult.detectedKeyword());
+        errorResult.put("sql_security_enabled", true);
+        return errorResult;
     }
 
     /**
@@ -225,6 +228,12 @@ public class MysqlOptionService {
                                                         @ToolParam(description = "Valid MySQL SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
 
+        // SQL安全验证
+        Map<String, Object> errorResult = validateSqlAndGetErrorResult(sql);
+        if (errorResult != null) {
+            return errorResult;
+        }
+
         // 存储查询结果
         Map<String, Object> result = new HashMap<>();
 
@@ -237,32 +246,16 @@ public class MysqlOptionService {
             return result;
         }
 
-        try (Connection conn = targetDataSource.getConnection();
-             Statement stmt = conn.createStatement()) {
+        // 使用JdbcExecutor执行SQL
+        JdbcExecutor.SqlResult sqlResult = jdbcExecutor.executeSql(targetDataSource, sql);
 
-            boolean hasResultSet = stmt.execute(sql);
-
-            if (hasResultSet) {
-                // 处理查询结果
-                try (ResultSet rs = stmt.getResultSet()) {
-                    String resultStr = processResultSet(rs);
-                    Object resultObj = objectMapper.readValue(resultStr, List.class);
-                    result.put(dataSourceName, resultObj);
-                    log.info("Query executed successfully on datasource [{}]", dataSourceName);
-                }
-            } else {
-                // 处理更新结果
-                int updateCount = stmt.getUpdateCount();
-                result.put(dataSourceName, updateCount);
-                log.info("SQL execution completed on datasource [{}], affected rows: {}", dataSourceName, updateCount);
-            }
-        } catch (SQLException e) {
-            log.error("SQL execution error on datasource [{}]: {}", dataSourceName, e.getMessage(), e);
-            result.put(dataSourceName, e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during SQL execution on datasource [{}]: {}", dataSourceName, e.getMessage(), e);
-            result.put(dataSourceName, e.getMessage());
+        if (sqlResult.success()) {
+            result.put(dataSourceName, sqlResult.data());
+            log.info("executeSqlWithDataSource Query executed successfully on datasource [{}]", dataSourceName);
+            return result;
         }
+
+        log.error("executeSqlWithDataSource SQL execution error on datasource [{}]: {}", dataSourceName, sqlResult.errorMessage());
 
         return result;
     }
@@ -302,29 +295,4 @@ public class MysqlOptionService {
         return groovyService.getAllExtensions();
     }
 
-
-    /**
-     * 处理ResultSet并转换为JSON字符串
-     * @param rs 结果集
-     * @return JSON字符串
-     */
-    private String processResultSet(ResultSet rs) throws Exception {
-        ResultSetMetaData metaData = rs.getMetaData();
-        int columnCount = metaData.getColumnCount();
-
-        List<Map<String, Object>> resultList = new ArrayList<>();
-
-        while (rs.next()) {
-            Map<String, Object> row = new HashMap<>();
-            for (int i = 1; i <= columnCount; i++) {
-                String columnName = metaData.getColumnLabel(i);
-                Object value = rs.getObject(i);
-                row.put(columnName, value);
-            }
-            resultList.add(row);
-        }
-
-        log.info("Query executed successfully, returned {} rows", resultList.size());
-        return objectMapper.writeValueAsString(resultList);
-    }
 }
