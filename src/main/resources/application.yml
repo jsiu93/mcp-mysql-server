@@ -4,11 +4,11 @@ spring:
   ai:
     mcp:
       server:
-        name: mcp-mysql-server
+        name: mcp-database-server
         version: 1.0.0
         stdio: true
   application:
-    name: mcp-mysql-server
+    name: mcp-database-server
   main:
     banner-mode: off
 server:
@@ -18,7 +18,7 @@ server:
 sql:
   security:
     # 是否启用SQL安全检查
-    enabled: true
+    enabled: false
     # 危险操作关键字配置（不区分大小写）
     dangerous-keywords:
       # DML危险操作

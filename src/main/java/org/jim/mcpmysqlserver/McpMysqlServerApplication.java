@@ -106,7 +106,7 @@ public class McpMysqlServerApplication {
 
 
     @Bean
-    public ToolCallbackProvider mysqlToolCallbackProvider(MysqlOptionService mysqlOptionService) {
+    public ToolCallbackProvider databaseToolCallbackProvider(MysqlOptionService mysqlOptionService) {
         return MethodToolCallbackProvider.builder()
                 .toolObjects(mysqlOptionService)
                 .build();
