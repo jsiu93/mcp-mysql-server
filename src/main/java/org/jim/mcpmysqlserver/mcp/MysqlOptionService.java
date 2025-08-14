@@ -168,13 +168,13 @@ public class MysqlOptionService {
      * @return 默认数据源的查询结果，格式为 {"defaultDataSourceName": result}
      */
     @Tool(description = "Executes a SQL query on the default MySQL datasource only. Priority: highest when the user hasn't specified an environment or datasource. The model should call this tool first; if it returns no data (empty result), then fall back to executeSql. This tool does not require calling listDataSources. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
-    public Object executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
+    public JsonNode executeSqlOnDefault(@ToolParam(description = "Valid MySQL SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on default datasource: {}", sql);
 
         // SQL安全验证
         Object errorResult1 = validateSqlAndGetErrorResult(sql);
         if (errorResult1 != null) {
-            return errorResult1;
+            return objectMapper.valueToTree(errorResult1);
         }
 
         // 获取默认数据源名称
@@ -184,15 +184,27 @@ public class MysqlOptionService {
             log.error(errorMsg);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("error", errorMsg);
-            return errorResult;
+            return objectMapper.valueToTree(errorResult);
         }
 
         Map<String, Object> stringObjectMap = executeSqlWithDataSource(defaultDataSourceName, sql);
         if (CollectionUtils.isEmpty(stringObjectMap)) {
-            return stringObjectMap;
+            log.warn("No results returned from SQL execution on default datasource [{}]", defaultDataSourceName);
+            Map<String, Object> emptyResult = new HashMap<>();
+            emptyResult.put("message", "No data returned from SQL query");
+            return objectMapper.valueToTree(emptyResult);
         }
 
-        return stringObjectMap.get(defaultDataSourceName);
+        // to JsonNode
+        try {
+            String o = objectMapper.writeValueAsString(stringObjectMap.get(defaultDataSourceName));
+            return objectMapper.readTree(o);
+        } catch (Exception e) {
+            log.error("Failed to parse SQL result as JSON: {}", e.getMessage(), e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", "Invalid JSON result from SQL query");
+            return objectMapper.valueToTree(errorResult);
+        }
     }
 
     private Map<String, Object> validateSqlAndGetErrorResult(String sql) {

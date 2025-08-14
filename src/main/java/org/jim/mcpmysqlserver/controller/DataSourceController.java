@@ -41,6 +41,13 @@ public class DataSourceController {
     }
 
 
+    @RequestMapping("/executeSqlOnDefault")
+    public ResponseEntity<Object> executeSqlOnDefault(@RequestParam String sql) {
+        Object result = mysqlOptionService.executeSqlOnDefault(sql);
+        return ResponseEntity.ok(result);
+    }
+
+
     /**
      * 获取所有数据源名称
      * @return 数据源名称列表
