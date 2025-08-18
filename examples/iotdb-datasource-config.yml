@@ -1,0 +1,28 @@
+# Apache IoTDB 数据源配置示例
+# 使用方法: 启动服务时通过 --datasource.config=<此文件绝对路径> 指定
+
+datasource:
+  datasources:
+    iotdb_primary:
+      # IoTDB JDBC URL, 默认端口 6667, 可选参数: version, charset 等
+      url: jdbc:iotdb://localhost:6667/?version=V_1_0
+      username: root
+      password: root
+      default: true
+      # 建议显式指定驱动类名, 也可省略让系统自动识别
+      driver-class-name: org.apache.iotdb.jdbc.IoTDBDriver
+      hikari:
+        pool-name: IoTDBHikariCP
+        maximum-pool-size: 5
+        minimum-idle: 1
+
+    # 如需与其他数据库并存, 可继续添加数据源
+    # mysql_db:
+    #   url: jdbc:mysql://localhost:3306/your_db
+    #   username: root
+    #   password: password
+    #   hikari:
+    #     pool-name: MySQLHikariCP
+    #     maximum-pool-size: 8
+    #     minimum-idle: 2
+

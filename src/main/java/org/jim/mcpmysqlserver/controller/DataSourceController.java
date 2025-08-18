@@ -121,10 +121,11 @@ public class DataSourceController {
 
         try {
             Map<String, Object> sqlResult;
+            String defaultName = dataSourceService.getDefaultDataSourceName();
             if (datasource == null || datasource.isEmpty() ||
                     "primary".equals(datasource) ||
-                    dataSourceService.getDefaultDataSourceName().equals(datasource)) {
-                sqlResult = mysqlOptionService.executeSql(sql);
+                    defaultName.equals(datasource)) {
+                sqlResult = mysqlOptionService.executeSqlWithDataSource(defaultName, sql);
             } else {
                 sqlResult = mysqlOptionService.executeSqlWithDataSource(datasource, sql);
             }

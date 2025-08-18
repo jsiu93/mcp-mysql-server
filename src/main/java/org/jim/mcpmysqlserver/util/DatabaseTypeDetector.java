@@ -20,6 +20,7 @@ public class DatabaseTypeDetector {
         ORACLE("Oracle", "oracle.jdbc.OracleDriver"),
         SQL_SERVER("SQL Server", "com.microsoft.sqlserver.jdbc.SQLServerDriver"),
         H2("H2", "org.h2.Driver"),
+        IOTDB("Apache IoTDB", "org.apache.iotdb.jdbc.IoTDBDriver"),
         UNKNOWN("Unknown", "com.mysql.cj.jdbc.Driver"); // 默认使用MySQL驱动
 
         private final String displayName;
@@ -68,6 +69,9 @@ public class DatabaseTypeDetector {
         } else if (lowerUrl.startsWith("jdbc:h2:")) {
             log.info("检测到H2数据库URL");
             return DatabaseType.H2;
+        } else if (lowerUrl.startsWith("jdbc:iotdb:")) {
+            log.info("检测到Apache IoTDB数据库URL");
+            return DatabaseType.IOTDB;
         } else {
             log.warn("无法识别数据库类型，URL: {}，返回默认类型: {}", jdbcUrl, DatabaseType.MYSQL.getDisplayName());
             return DatabaseType.UNKNOWN;
