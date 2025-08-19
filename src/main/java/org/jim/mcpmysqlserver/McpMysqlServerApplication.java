@@ -5,8 +5,10 @@ import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
+import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
+import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.jim.mcpmysqlserver.util.PortUtils;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -15,6 +17,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -113,25 +117,313 @@ public class McpMysqlServerApplication {
     }
 
     @Bean
-    public List<McpServerFeatures.SyncResourceSpecification> myResources() {
-        McpSchema.Annotations annotations = new McpSchema.Annotations(
+    public List<McpServerFeatures.SyncResourceSpecification> myResources(
+            DataSourceService dataSourceService,
+            GroovyService groovyService,
+            MysqlOptionService mysqlOptionService) {
+
+        McpSchema.Annotations highPriorityAnnotations = new McpSchema.Annotations(
                 List.of(McpSchema.Role.USER, McpSchema.Role.ASSISTANT), 0.9
         );
 
-        var systemInfoResource = new McpSchema.Resource("file:///Users/xin.y/Documents/table.json", "测试数据库与表信息", "列出数据库与表信息", "application/json", annotations);
-        var resourceSpecification = new McpServerFeatures.SyncResourceSpecification(systemInfoResource, (exchange, request) -> {
+        McpSchema.Annotations mediumPriorityAnnotations = new McpSchema.Annotations(
+                List.of(McpSchema.Role.USER, McpSchema.Role.ASSISTANT), 0.7
+        );
+
+        List<McpServerFeatures.SyncResourceSpecification> resources = new ArrayList<>();
+
+        // 1. 数据源配置信息Resource
+        var dataSourceResource = new McpSchema.Resource(
+                "mcp://datasources/config",
+                "数据源配置信息",
+                "提供所有配置的数据源详细信息，包括数据库类型、连接状态等",
+                "application/json",
+                highPriorityAnnotations
+        );
+
+        var dataSourceSpec = new McpServerFeatures.SyncResourceSpecification(dataSourceResource, (exchange, request) -> {
             try {
-                var systemInfo = Map.of("test1", "test1111");
-                String jsonContent = new ObjectMapper().writeValueAsString(systemInfo);
+                Map<String, Object> dataSourceInfo = new HashMap<>();
+
+                // 获取数据源详细信息
+                List<Map<String, Object>> dataSourceDetails = dataSourceService.getDataSourceDetails();
+                String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
+
+                dataSourceInfo.put("datasources", dataSourceDetails);
+                dataSourceInfo.put("defaultDataSource", defaultDataSourceName);
+                dataSourceInfo.put("totalCount", dataSourceDetails.size());
+                dataSourceInfo.put("lastUpdated", java.time.Instant.now().toString());
+
+                String jsonContent = new ObjectMapper().writeValueAsString(dataSourceInfo);
                 return new McpSchema.ReadResourceResult(
                         List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
             } catch (Exception e) {
-                throw new RuntimeException("Failed to generate system info", e);
+                log.error("Failed to generate datasource info: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to generate datasource info", e);
             }
         });
+        resources.add(dataSourceSpec);
 
+       // 2. 数据库表结构信息Resource
+        var tableStructureResource = new McpSchema.Resource(
+                "mcp://database/tables",
+                "数据库表结构信息",
+                "提供默认数据源中所有表的结构信息，包括表名、字段信息等",
+                "application/json",
+                highPriorityAnnotations
+        );
 
-        return List.of(resourceSpecification);
+        var tableStructureSpec = new McpServerFeatures.SyncResourceSpecification(tableStructureResource, (exchange, request) -> {
+            try {
+                Map<String, Object> tableInfo = new HashMap<>();
+                String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
+
+                // 获取数据库类型
+                List<Map<String, Object>> dataSourceDetails = dataSourceService.getDataSourceDetails();
+                String databaseType = dataSourceDetails.stream()
+                        .filter(ds -> defaultDataSourceName.equals(ds.get("name")))
+                        .map(ds -> (String) ds.get("databaseType"))
+                        .findFirst()
+                        .orElse("Unknown");
+
+                String tableQuery;
+
+                // 根据数据库类型选择合适的查询语句
+                switch (databaseType.toLowerCase()) {
+                    case "postgresql":
+                        tableQuery = "SELECT " +
+                                "table_name as TABLE_NAME, " +
+                                "'' as TABLE_COMMENT, " +
+                                "0 as TABLE_ROWS, " +
+                                "null as CREATE_TIME, " +
+                                "null as UPDATE_TIME " +
+                                "FROM information_schema.tables " +
+                                "WHERE table_schema = 'public' " +
+                                "ORDER BY table_name";
+                        break;
+                    case "oracle":
+                        tableQuery = "SELECT " +
+                                "table_name as TABLE_NAME, " +
+                                "'' as TABLE_COMMENT, " +
+                                "num_rows as TABLE_ROWS, " +
+                                "created as CREATE_TIME, " +
+                                "last_analyzed as UPDATE_TIME " +
+                                "FROM user_tables " +
+                                "ORDER BY table_name";
+                        break;
+                    case "sql server":
+                        tableQuery = "SELECT " +
+                                "TABLE_NAME, " +
+                                "'' as TABLE_COMMENT, " +
+                                "0 as TABLE_ROWS, " +
+                                "null as CREATE_TIME, " +
+                                "null as UPDATE_TIME " +
+                                "FROM INFORMATION_SCHEMA.TABLES " +
+                                "WHERE TABLE_TYPE = 'BASE TABLE' " +
+                                "ORDER BY TABLE_NAME";
+                        break;
+                    case "h2":
+                        tableQuery = "SELECT " +
+                                "TABLE_NAME, " +
+                                "REMARKS as TABLE_COMMENT, " +
+                                "0 as TABLE_ROWS, " +
+                                "null as CREATE_TIME, " +
+                                "null as UPDATE_TIME " +
+                                "FROM INFORMATION_SCHEMA.TABLES " +
+                                "WHERE TABLE_SCHEMA = SCHEMA() " +
+                                "ORDER BY TABLE_NAME";
+                        break;
+                    case "mysql":
+                    default:
+                        tableQuery = "SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS, CREATE_TIME, UPDATE_TIME " +
+                                "FROM INFORMATION_SCHEMA.TABLES " +
+                                "WHERE TABLE_SCHEMA = DATABASE() " +
+                                "ORDER BY TABLE_NAME";
+                        break;
+                }
+
+                Map<String, Object> tablesResult = mysqlOptionService.executeSqlWithDataSource(
+                        defaultDataSourceName,
+                        tableQuery
+                );
+
+                tableInfo.put("tables", tablesResult.get(defaultDataSourceName));
+                tableInfo.put("databaseName", defaultDataSourceName);
+                tableInfo.put("databaseType", databaseType);
+                tableInfo.put("lastUpdated", java.time.Instant.now().toString());
+
+                String jsonContent = new ObjectMapper().writeValueAsString(tableInfo);
+                return new McpSchema.ReadResourceResult(
+                        List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
+            } catch (Exception e) {
+                log.error("Failed to generate table structure info: {}", e.getMessage(), e);
+                // 如果查询失败，提供通用的备选方案
+                try {
+                    String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
+                    Map<String, Object> fallbackResult = mysqlOptionService.executeSqlWithDataSource(
+                            defaultDataSourceName,
+                            "SELECT 'Please use appropriate SQL for your database type' as message"
+                    );
+
+                    Map<String, Object> errorInfo = new HashMap<>();
+                    errorInfo.put("error", "无法获取表结构信息，可能是权限不足或数据库类型不支持");
+                    errorInfo.put("suggestion", "请根据您的数据库类型使用合适的SQL语句查询表信息");
+                    errorInfo.put("databaseName", defaultDataSourceName);
+                    errorInfo.put("commonQueries", Map.of(
+                            "MySQL", "SHOW TABLES",
+                            "PostgreSQL", "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
+                            "Oracle", "SELECT table_name FROM user_tables",
+                            "SQL Server", "SELECT name FROM sys.tables",
+                            "H2", "SHOW TABLES"
+                    ));
+
+                    String jsonContent = new ObjectMapper().writeValueAsString(errorInfo);
+                    return new McpSchema.ReadResourceResult(
+                            List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
+                } catch (Exception jsonEx) {
+                    throw new RuntimeException("Failed to generate table structure info", jsonEx);
+                }
+            }
+        });
+        resources.add(tableStructureSpec);
+        // 3. 扩展功能信息Resource
+        var extensionsResource = new McpSchema.Resource(
+                "mcp://extensions/list",
+                "Groovy扩展功能列表",
+                "提供所有可用的Groovy扩展功能信息，包括功能描述、使用方法等",
+                "application/json",
+                mediumPriorityAnnotations
+        );
+
+        var extensionsSpec = new McpServerFeatures.SyncResourceSpecification(extensionsResource, (exchange, request) -> {
+            try {
+                Map<String, Object> extensionInfo = new HashMap<>();
+
+                List<Extension> extensions = groovyService.getAllExtensions();
+
+                // 过滤启用的扩展并格式化信息
+                List<Map<String, Object>> enabledExtensions = extensions.stream()
+                        .filter(ext -> ext.getEnabled() != null && ext.getEnabled())
+                        .map(ext -> {
+                            Map<String, Object> extInfo = new HashMap<>();
+                            extInfo.put("name", ext.getName());
+                            extInfo.put("description", ext.getDescription());
+                            extInfo.put("prompt", ext.getPrompt());
+                            extInfo.put("enabled", ext.getEnabled());
+                            return extInfo;
+                        })
+                        .toList();
+
+                extensionInfo.put("extensions", enabledExtensions);
+                extensionInfo.put("totalCount", extensions.size());
+                extensionInfo.put("enabledCount", enabledExtensions.size());
+                extensionInfo.put("lastUpdated", java.time.Instant.now().toString());
+
+                String jsonContent = new ObjectMapper().writeValueAsString(extensionInfo);
+                return new McpSchema.ReadResourceResult(
+                        List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
+            } catch (Exception e) {
+                log.error("Failed to generate extensions info: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to generate extensions info", e);
+            }
+        });
+        resources.add(extensionsSpec);
+
+        // 4. 常用SQL模板Resource
+        var sqlTemplatesResource = new McpSchema.Resource(
+                "mcp://sql/templates",
+                "常用SQL查询模板",
+                "提供常用的SQL查询模板和示例，帮助快速构建查询语句",
+                "application/json",
+                mediumPriorityAnnotations
+        );
+
+        var sqlTemplatesSpec = new McpServerFeatures.SyncResourceSpecification(sqlTemplatesResource, (exchange, request) -> {
+            try {
+                Map<String, Object> templatesInfo = new HashMap<>();
+
+                // 定义常用SQL模板
+                List<Map<String, Object>> templates = List.of(
+                        Map.of(
+                                "category", "基础查询",
+                                "name", "查看表结构",
+                                "template", "DESCRIBE {table_name}",
+                                "description", "查看指定表的字段结构",
+                                "example", "DESCRIBE users"
+                        ),
+                        Map.of(
+                                "category", "基础查询",
+                                "name", "查看所有表",
+                                "template", "SHOW TABLES",
+                                "description", "列出当前数据库中的所有表",
+                                "example", "SHOW TABLES"
+                        ),
+                        Map.of(
+                                "category", "数据查询",
+                                "name", "分页查询",
+                                "template", "SELECT * FROM {table_name} LIMIT {offset}, {limit}",
+                                "description", "分页查询表数据",
+                                "example", "SELECT * FROM users LIMIT 0, 10"
+                        ),
+                        Map.of(
+                                "category", "数据查询",
+                                "name", "条件查询",
+                                "template", "SELECT * FROM {table_name} WHERE {condition}",
+                                "description", "根据条件查询数据",
+                                "example", "SELECT * FROM users WHERE status = 'active'"
+                        ),
+                        Map.of(
+                                "category", "统计查询",
+                                "name", "记录计数",
+                                "template", "SELECT COUNT(*) as total FROM {table_name}",
+                                "description", "统计表中的记录总数",
+                                "example", "SELECT COUNT(*) as total FROM users"
+                        ),
+                        Map.of(
+                                "category", "统计查询",
+                                "name", "分组统计",
+                                "template", "SELECT {group_field}, COUNT(*) as count FROM {table_name} GROUP BY {group_field}",
+                                "description", "按字段分组统计",
+                                "example", "SELECT status, COUNT(*) as count FROM users GROUP BY status"
+                        ),
+                        Map.of(
+                                "category", "系统信息",
+                                "name", "数据库版本",
+                                "template", "SELECT VERSION() as version",
+                                "description", "查看数据库版本信息",
+                                "example", "SELECT VERSION() as version"
+                        ),
+                        Map.of(
+                                "category", "系统信息",
+                                "name", "当前时间",
+                                "template", "SELECT NOW() as current_time",
+                                "description", "获取当前数据库时间",
+                                "example", "SELECT NOW() as current_time"
+                        )
+                );
+
+                templatesInfo.put("templates", templates);
+                templatesInfo.put("totalCount", templates.size());
+                templatesInfo.put("categories", templates.stream()
+                        .map(t -> (String) t.get("category"))
+                        .distinct()
+                        .sorted()
+                        .toList());
+                templatesInfo.put("usage", "将模板中的 {参数} 替换为实际值，例如 {table_name} 替换为实际的表名");
+                templatesInfo.put("lastUpdated", java.time.Instant.now().toString());
+
+                String jsonContent = new ObjectMapper().writeValueAsString(templatesInfo);
+                return new McpSchema.ReadResourceResult(
+                        List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", jsonContent)));
+            } catch (Exception e) {
+                log.error("Failed to generate SQL templates info: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to generate SQL templates info", e);
+            }
+        });
+        resources.add(sqlTemplatesSpec);
+
+        log.info("Initialized {} MCP resources", resources.size());
+        return resources;
     }
 
     @Bean
