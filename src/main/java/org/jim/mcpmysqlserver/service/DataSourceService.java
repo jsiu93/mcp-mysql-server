@@ -2,6 +2,7 @@ package org.jim.mcpmysqlserver.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jim.mcpmysqlserver.config.DataSourceConfig;
+import org.jim.mcpmysqlserver.util.DatabaseTypeDetector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,5 +117,55 @@ public class DataSourceService {
      */
     public String getDefaultDataSourceName() {
         return dataSourceConfig.getDefaultDataSourceName();
+    }
+
+    /**
+     * 获取所有数据源的详细信息，包括数据库类型
+     * @return 数据源详细信息列表
+     */
+    public List<Map<String, Object>> getDataSourceDetails() {
+        log.info("获取所有数据源的详细信息");
+
+        List<Map<String, Object>> dataSourceDetails = new ArrayList<>();
+        Map<String, Map<String, Object>> datasources = dataSourceConfig.getDatasources();
+
+        if (datasources == null || datasources.isEmpty()) {
+            log.warn("没有配置任何数据源");
+            return dataSourceDetails;
+        }
+
+        // 遍历所有配置的数据源
+        for (Map.Entry<String, Map<String, Object>> entry : datasources.entrySet()) {
+            String dsName = entry.getKey();
+            Map<String, Object> dsConfig = entry.getValue();
+
+            Map<String, Object> dsDetail = new HashMap<>();
+            dsDetail.put("name", dsName);
+
+            // 获取数据库URL并检测数据库类型
+            String url = (String) dsConfig.get("url");
+            if (url != null) {
+                DatabaseTypeDetector.DatabaseType dbType = DatabaseTypeDetector.detectDatabaseType(url);
+                dsDetail.put("databaseType", dbType.getDisplayName());
+                dsDetail.put("driverClassName", dbType.getDriverClassName());
+                log.debug("数据源 [{}] 数据库类型: {}", dsName, dbType.getDisplayName());
+            } else {
+                dsDetail.put("databaseType", "Unknown");
+                dsDetail.put("driverClassName", "Unknown");
+                log.warn("数据源 [{}] 没有配置URL，无法检测数据库类型", dsName);
+            }
+
+            // 添加是否为默认数据源的标识
+            String defaultDsName = getDefaultDataSourceName();
+            dsDetail.put("isDefault", dsName.equals(defaultDsName));
+
+            dataSourceDetails.add(dsDetail);
+        }
+
+        // 按名称排序
+        dataSourceDetails.sort((a, b) -> ((String) a.get("name")).compareTo((String) b.get("name")));
+
+        log.info("获取到 {} 个数据源的详细信息", dataSourceDetails.size());
+        return dataSourceDetails;
     }
 }

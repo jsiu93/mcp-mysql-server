@@ -71,7 +71,7 @@ public class MysqlOptionService {
      * @param sql 要执行的SQL语句
      * @return 所有成功的数据源的查询结果，格式为 {"datasourceName": result, ...}
      */
-    @Tool(description = "Executes a SQL query on all configured datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Use ONLY when the user explicitly asks to query all environments/datasources. Do NOT use as automatic fallback when default/single-datasource returns empty. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    @Tool(description = "Executes a SQL query on all configured datasources simultaneously. Returns results as JSON mapping each datasource name to its query result. Use ONLY when the user explicitly asks to query all environments/datasources. Do NOT use as automatic fallback when default/single-datasource returns empty. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed. TIP: Call listDataSources() first to understand the database types of all datasources, then use appropriate SQL syntax for each database type (MySQL, PostgreSQL, Oracle, SQL Server, H2, or IoTDB).")
     public Map<String, Object> executeSql(@ToolParam(description = "Valid SQL statement (e.g., 'SELECT id, name FROM users WHERE status = \"active\"')") String sql) {
         log.info("Executing SQL on all available datasources: {}", sql);
 
@@ -140,19 +140,24 @@ public class MysqlOptionService {
     }
 
     /**
-     * 获取所有可用的数据源名称
-     * @return 数据源名称列表和默认数据源名称
+     * 获取所有可用的数据源名称和数据库类型信息
+     * @return 数据源名称列表、默认数据源名称和每个数据源的数据库类型
      */
-    @Tool(description = "Lists all available datasource names. Returns JSON with 'datasources' array and 'default' datasource name. Use this before executeSqlWithDataSource to identify available datasources. Not required when using executeSqlOnDefault.")
+    @Tool(description = "Lists all available datasource names with database type information. Returns JSON with 'datasources' array containing datasource details, 'default' datasource name, and database type for each datasource. Use this before executeSqlWithDataSource to identify available datasources and their database types for optimal SQL syntax selection. Not required when using executeSqlOnDefault.")
     public Map<String, Object> listDataSources() {
-        log.info("Listing all available datasources");
+        log.info("Listing all available datasources with database type information");
 
         List<String> dataSourceNames = dataSourceService.getDataSourceNames();
         String defaultDataSourceName = dataSourceService.getDefaultDataSourceName();
 
+        // 获取每个数据源的详细信息，包括数据库类型
+        List<Map<String, Object>> dataSourceDetails = dataSourceService.getDataSourceDetails();
+
         Map<String, Object> result = new HashMap<>();
-        result.put("datasources", dataSourceNames);
+        result.put("datasources", dataSourceDetails);
         result.put("default", defaultDataSourceName);
+
+        log.info("返回数据源信息: 默认数据源={}, 总数据源数量={}", defaultDataSourceName, dataSourceDetails.size());
 
         return result;
     }
@@ -168,7 +173,7 @@ public class MysqlOptionService {
      * @param sql 要执行的SQL语句
      * @return 默认数据源的查询结果，格式为 {"defaultDataSourceName": result}
      */
-    @Tool(description = "Executes a SQL query on the default datasource datasource only. Priority: highest when the user hasn't specified an environment or datasource. The model should call this tool first; if it returns no data (empty result), then fall back to executeSql. This tool does not require calling listDataSources. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    @Tool(description = "Executes a SQL query on the default datasource only. Priority: highest when the user hasn't specified an environment or datasource. The model should call this tool first; if it returns no data (empty result), then fall back to executeSql. This tool does not require calling listDataSources. More efficient than executeSql for single default datasource operations. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed. TIP: If you need to know the database type for optimal SQL syntax, call listDataSources() first to get database type information.")
     public JsonNode executeSqlOnDefault(@ToolParam(description = "Valid  SQL statement to execute on default datasource (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on default datasource: {}", sql);
 
@@ -236,7 +241,7 @@ public class MysqlOptionService {
      * @param sql 要执行的SQL语句
      * @return 查询结果，格式为 {"datasourceName": result}
      */
-    @Tool(description = "Executes a SQL query on a single specific datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations. Note: This tool is lower priority than executeSql, unless user explicitly requests a single-datasource operation. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed.")
+    @Tool(description = "Executes a SQL query on a single specific datasource. Returns JSON result for just that datasource. More efficient than executeSql for single-datasource operations. Note: This tool is lower priority than executeSql, unless user explicitly requests a single-datasource operation. IMPORTANT: Query results may contain encrypted, encoded, or other data that requires processing. If you notice data that appears to be encrypted, encoded (Base64, hex strings, etc.), or needs special handling, proactively call getAllExtensions() to discover available data processing extensions, then use executeGroovyScript() to decrypt, decode, or transform the data as needed. TIP: Call listDataSources() first to get database type information for the target datasource, then use appropriate SQL syntax (MySQL, PostgreSQL, Oracle, SQL Server, H2, or IoTDB).")
     public Map<String, Object> executeSqlWithDataSource(@ToolParam(description = "Name of the target datasource (obtain from listDataSources and must match a datasource name from listDataSources)") String dataSourceName,
                                                         @ToolParam(description = "Valid SQL statement to execute (e.g., 'SELECT * FROM users LIMIT 10')") String sql) {
         log.info("Executing SQL on datasource [{}]: {}", dataSourceName, sql);
