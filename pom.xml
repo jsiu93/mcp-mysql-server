@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.jim</groupId>
     <artifactId>mcp-mysql-server</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.5-SNAPSHOT</version>
     <name>mcp-mysql-server</name>
     <description>MCP Database Server - 支持MySQL、PostgreSQL等多种数据库的MCP服务器</description>
     <url/>
