@@ -117,10 +117,13 @@ public class DynamicDataSourceConfig {
                     .type(HikariDataSource.class)
                     .build();
 
-            // 设置默认的Hikari配置
+            // 设置默认的Hikari配置（优化后的默认值）
             dataSource.setMaximumPoolSize(10);
-            dataSource.setMinimumIdle(5);
-            dataSource.setPoolName(dsName + "HikariCP");
+            dataSource.setMinimumIdle(3);
+            dataSource.setIdleTimeout(300000); // 默认5分钟
+            dataSource.setConnectionTimeout(10000); // 默认10秒
+            dataSource.setMaxLifetime(1800000); // 默认30分钟
+            dataSource.setPoolName(dsName + "-HikariCP");
 
             // 绑定Hikari特定属性，如果用户配置了则覆盖默认值
             Map<String, Object> hikariProperties = (Map<String, Object>) dsProperties.get("hikari");
