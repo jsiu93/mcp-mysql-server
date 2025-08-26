@@ -3,3 +3,6 @@ extensions:
   - name: iotdbBase64Decoder
     description: "IoTDB查询结果Base64解码工具，专门用于解码IoTDB查询返回的base64编码字段数据"
     prompt: "解码IoTDB查询结果中的Base64编码字段。输入应为IoTDB查询的完整JSON响应，工具会自动识别并解码其中包含base64数据的字段（如Timeseries、Database、DataType等），返回包含原始base64值和解码后可读文本的详细结果"
+  - name: base64Decoder
+    description: "通用Base64解码工具，用于解码任意Base64编码的字符串"
+    prompt: "解码Base64编码的字符串。输入应为Base64编码的字符串，工具会将其解码为原始文本并返回结果。支持标准Base64编码格式"
