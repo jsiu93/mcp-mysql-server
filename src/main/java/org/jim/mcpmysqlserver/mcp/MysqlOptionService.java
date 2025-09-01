@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -42,6 +43,7 @@ public class MysqlOptionService {
     private final ObjectMapper objectMapper;
     private final SqlSecurityValidator sqlSecurityValidator;
     private final JdbcExecutor jdbcExecutor;
+    private final ExecutorService executorService;
 
     @Resource
     private GroovyService groovyService;
@@ -53,7 +55,27 @@ public class MysqlOptionService {
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        log.info("DatabaseOptionService initialized with DataSourceService, SqlSecurityValidator and JdbcExecutor");
+        this.executorService = Executors.newFixedThreadPool(5);
+        log.info("DatabaseOptionService initialized with DataSourceService, SqlSecurityValidator, JdbcExecutor and ExecutorService");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Shutting down ExecutorService");
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                log.warn("ExecutorService did not terminate gracefully, forcing shutdown");
+                executorService.shutdownNow();
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    log.error("ExecutorService did not terminate after forced shutdown");
+                }
+            }
+        } catch (InterruptedException e) {
+            log.error("ExecutorService shutdown interrupted: {}", e.getMessage(), e);
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
 
@@ -88,10 +110,6 @@ public class MysqlOptionService {
         // 存储每个数据源的查询结果，使用线程安全的ConcurrentHashMap
         Map<String, Object> successResults = new ConcurrentHashMap<>();
 
-        // 创建固定大小的线程池，最多5个线程同时执行
-        ExecutorService executor = Executors.newFixedThreadPool(Math.min(5, dataSourceNames.size()));
-        log.info("Created thread pool with {} threads", Math.min(5, dataSourceNames.size()));
-
         try {
             // 等待所有任务完成
             CompletableFuture<Void> allFutures = CompletableFuture.allOf(dataSourceNames.stream()
@@ -114,7 +132,7 @@ public class MysqlOptionService {
                         }
 
                         log.error("SQL execution error on datasource [{}]: {}", dsName, result.errorMessage());
-                    }, executor)).toArray(CompletableFuture[]::new)
+                    }, executorService)).toArray(CompletableFuture[]::new)
             );
 
             // 设置超时时间，避免长时间等待
@@ -122,18 +140,6 @@ public class MysqlOptionService {
 
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             log.error("Error executing SQL on all datasources: {}", e.getMessage(), e);
-        } finally {
-            // 关闭线程池
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-                log.error("Thread pool termination interrupted: {}", e.getMessage(), e);
-            }
         }
 
         return successResults;
