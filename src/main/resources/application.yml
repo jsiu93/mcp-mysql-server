@@ -6,13 +6,24 @@ spring:
       server:
         name: mcp-database-server
         version: 1.0.0
-        stdio: true
+        protocol: STREAMABLE
+        webflux: false
+        stdio: false
+        type: sync
+        keep-alive-interval: 30s
+        streamable-http:
+          type: sync
+          keep-alive-interval: 30s
+          mcp-endpoint: /mcp
+
+
   application:
     name: mcp-database-server
   main:
-    banner-mode: off
+    banner-mode: console
+    allow-bean-definition-overriding: true
 server:
-  port: 9433
+  port: 6788
 
 # SQL安全控制配置
 sql:
@@ -49,6 +60,10 @@ logging:
   file:
     name: logs/mcp-server.log
   level:
-    root: OFF
+    root: INFO
+    org.jim: INFO
+    org.springframework: INFO
+    com.zaxxer.hikari: INFO
   pattern:
-    console: ""
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -41,27 +41,7 @@ public class McpMysqlServerApplication {
      * @param args 命令行参数
      */
     public static void main(String[] args) {
-        // 从命令行参数或环境变量中获取端口号，默认为9433
-        int port = getPortFromArgs(args, DEFAULT_PORT);
-
-        // 检查端口是否已被占用
-        if (PortUtils.isPortInUse(port)) {
-            // 获取一个随机可用端口
-            int randomPort = PortUtils.findAvailablePort();
-            if (randomPort <= 0) {
-                log.error("Failed to find an available port. Exiting...");
-                System.exit(1);
-                return;
-            }
-
-            // 设置系统属性，使Spring Boot使用新的端口
-            System.setProperty("server.port", String.valueOf(randomPort));
-        }
-
-        // 获取最终使用的端口号（可能是随机分配的）
-        String finalPort = System.getProperty("server.port", String.valueOf(port));
-        SpringApplication.run(McpMysqlServerApplication.class, args);
-    }
+        SpringApplication.run(McpMysqlServerApplication.class, args);    }
 
     /**
      * 从命令行参数中获取端口号
