@@ -3,6 +3,8 @@ package org.jim.mcpmysqlserver.config.extension;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.Map;
+
 /**
  * @author James Smith
  */
@@ -53,5 +55,11 @@ public class Extension {
      * 给AI模型的提示词
      */
     private String prompt;
+
+    /**
+     * 扩展配置参数，支持自定义配置项
+     * 例如：加密密钥、算法参数等
+     */
+    private Map<String, Object> config;
 
 }

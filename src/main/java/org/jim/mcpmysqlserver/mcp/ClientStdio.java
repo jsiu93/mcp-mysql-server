@@ -34,28 +34,28 @@ import java.util.Map;
  */
 public class ClientStdio {
 
-    public static void main(String[] args) {
-
-        var stdioParams = ServerParameters.builder("java")
-                .args("-jar",
-                        "-Dspring.ai.mcp.server.stdio=true",
-                        "/Users/yangxin/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar")
-                .build();
-
-        var transport = new StdioClientTransport(stdioParams);
-        var client = McpClient.sync(transport).build();
-
-        client.initialize();
-
-        // List and demonstrate tools
-        ListToolsResult toolsList = client.listTools();
-        System.out.println("Available Tools = " + toolsList);
-
-        CallToolResult weatherForcastResult = client.callTool(new CallToolRequest("executeSql",
-                Map.of("sql", "select * from users where id = 1")));
-        System.out.println("Weather Forcast: " + weatherForcastResult);
-
-        client.closeGracefully();
-    }
+//    public static void main(String[] args) {
+//
+//        var stdioParams = ServerParameters.builder("java")
+//                .args("-jar",
+//                        "-Dspring.ai.mcp.server.stdio=true",
+//                        "/Users/yangxin/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar")
+//                .build();
+//
+//        var transport = new StdioClientTransport(stdioParams);
+//        var client = McpClient.sync(transport).build();
+//
+//        client.initialize();
+//
+//        // List and demonstrate tools
+//        ListToolsResult toolsList = client.listTools();
+//        System.out.println("Available Tools = " + toolsList);
+//
+//        CallToolResult weatherForcastResult = client.callTool(new CallToolRequest("executeSql",
+//                Map.of("sql", "select * from users where id = 1")));
+//        System.out.println("Weather Forcast: " + weatherForcastResult);
+//
+//        client.closeGracefully();
+//    }
 
 }

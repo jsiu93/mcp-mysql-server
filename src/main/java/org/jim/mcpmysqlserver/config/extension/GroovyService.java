@@ -233,6 +233,7 @@ public class GroovyService {
 
             log.info("Executing Groovy script for extension: {}", extensionName);
             groovyEngine.put("inputString", input);
+            groovyEngine.put("extensionConfig", extension.getConfig());
             Object result = groovyEngine.eval(scriptContent);
             log.info("Groovy script executed successfully for extension: {}", extensionName);
             return result;
