@@ -7,12 +7,12 @@ spring:
         name: mcp-database-server
         version: 1.0.0
         protocol: STREAMABLE
-        webflux: false
+        webflux:
+          enabled: false  # Explicitly disable default WebFlux transport
         stdio: false
         type: sync
         keep-alive-interval: 30s
         streamable-http:
-          type: sync
           keep-alive-interval: 30s
           mcp-endpoint: /mcp
 
