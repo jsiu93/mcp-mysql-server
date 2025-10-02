@@ -10,7 +10,7 @@
     </parent>
     <groupId>org.jim</groupId>
     <artifactId>mcp-mysql-server</artifactId>
-    <version>1.0.8-SSE</version>
+    <version>1.0.9-STREAMABLE</version>
     <name>mcp-mysql-server</name>
     <description>MCP Database Server - 支持MySQL、PostgreSQL等多种数据库的MCP服务器</description>
     <url/>
@@ -28,7 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <spring-ai.version>1.0.2</spring-ai.version>
+        <spring-ai.version>1.1.0-M2</spring-ai.version>
     </properties>
     <dependencies>
 

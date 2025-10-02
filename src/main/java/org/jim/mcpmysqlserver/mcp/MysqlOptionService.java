@@ -116,7 +116,7 @@ public class MysqlOptionService {
     public Map<String, Object> executeSql(@ToolParam(description = """
             Valid SQL statement compatible with target database dialect
             Examples:
-            - MySQL/PostgreSQL: SELECT id, name FROM users WHERE status = "active"
+            - MySQL/PostgreSQL: SELECT id, name FROM users WHERE status = 'active'
             - SQL Server: SELECT id, name FROM users WHERE status = 'active'
             - Oracle: SELECT id, name FROM users WHERE status = 'active' AND ROWNUM <= 10
             """) String sql) {
