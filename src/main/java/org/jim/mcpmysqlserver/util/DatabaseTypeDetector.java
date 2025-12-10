@@ -21,6 +21,7 @@ public class DatabaseTypeDetector {
         SQL_SERVER("SQL Server", "com.microsoft.sqlserver.jdbc.SQLServerDriver"),
         H2("H2", "org.h2.Driver"),
         IOTDB("Apache IoTDB", "org.apache.iotdb.jdbc.IoTDBDriver"),
+        SQLITE("SQLite", "org.sqlite.JDBC"),
         UNKNOWN("Unknown", "com.mysql.cj.jdbc.Driver"); // 默认使用MySQL驱动
 
         private final String displayName;
@@ -72,6 +73,9 @@ public class DatabaseTypeDetector {
         } else if (lowerUrl.startsWith("jdbc:iotdb:")) {
             log.info("检测到Apache IoTDB数据库URL");
             return DatabaseType.IOTDB;
+        } else if (lowerUrl.startsWith("jdbc:sqlite:")) {
+            log.info("检测到SQLite数据库URL");
+            return DatabaseType.SQLITE;
         } else {
             log.warn("无法识别数据库类型，URL: {}，返回默认类型: {}", jdbcUrl, DatabaseType.MYSQL.getDisplayName());
             return DatabaseType.UNKNOWN;

@@ -213,6 +213,18 @@ public class McpMysqlServerApplication {
                                 "WHERE TABLE_SCHEMA = SCHEMA() " +
                                 "ORDER BY TABLE_NAME";
                         break;
+                    case "sqlite":
+                        tableQuery = "SELECT " +
+                                "name as TABLE_NAME, " +
+                                "'' as TABLE_COMMENT, " +
+                                "0 as TABLE_ROWS, " +
+                                "null as CREATE_TIME, " +
+                                "null as UPDATE_TIME " +
+                                "FROM sqlite_master " +
+                                "WHERE type = 'table' " +
+                                "AND name NOT LIKE 'sqlite_%' " +
+                                "ORDER BY name";
+                        break;
                     case "mysql":
                     default:
                         tableQuery = "SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS, CREATE_TIME, UPDATE_TIME " +
@@ -254,7 +266,8 @@ public class McpMysqlServerApplication {
                             "PostgreSQL", "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
                             "Oracle", "SELECT table_name FROM user_tables",
                             "SQL Server", "SELECT name FROM sys.tables",
-                            "H2", "SHOW TABLES"
+                            "H2", "SHOW TABLES",
+                            "SQLite", "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
                     ));
 
                     String jsonContent = new ObjectMapper().writeValueAsString(errorInfo);

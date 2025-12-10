@@ -65,12 +65,18 @@ datasource:
       username: root
       password: password
       default: true  # 标记为默认数据源
+    sqlite_demo:
+      url: jdbc:sqlite:/opt/data/sqlite-demo.db
+      username: ''   # SQLite 可留空
+      password: ''
+      driver-class-name: org.sqlite.JDBC
 ```
 
 ---
 
 ## 功能特点
 
+- **多数据库兼容** - 开箱即用支持 MySQL、PostgreSQL、SQLite、Oracle、SQL Server、H2、Apache IoTDB
 - **多数据源支持** - 配置和管理多个数据库数据源
 - **动态数据源切换** - 运行时动态切换不同的数据源
 - **扩展功能** - 通过 Groovy 脚本扩展功能

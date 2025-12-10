@@ -11,7 +11,7 @@ spring:
         type: sync
 #        keep-alive-interval: 30s
         streamable-http:
-          keep-alive-interval: 30s
+#          keep-alive-interval: 30s
           mcp-endpoint: /mcp
 
 
@@ -21,7 +21,7 @@ spring:
     banner-mode: console
     allow-bean-definition-overriding: true
 server:
-  port: 6788
+  port: 6789
 
 # SQL安全控制配置
 sql:
@@ -62,6 +62,7 @@ logging:
     org.jim: INFO
     org.springframework: INFO
     com.zaxxer.hikari: INFO
+#    io.modelcontextprotocol.util.KeepAliveScheduler: ERROR
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

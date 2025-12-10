@@ -65,12 +65,18 @@ datasource:
       username: root
       password: password
       default: true  # Mark as default data source
+    sqlite_demo:
+      url: jdbc:sqlite:/opt/data/sqlite-demo.db
+      username: ''   # SQLite can omit credentials
+      password: ''
+      driver-class-name: org.sqlite.JDBC
 ```
 
 ---
 
 ## Features
 
+- **Multi-Database Compatibility** - Works out of the box with MySQL, PostgreSQL, SQLite, Oracle, SQL Server, H2 and Apache IoTDB
 - **Multiple Data Source Support** - Configure and manage multiple database data sources
 - **Dynamic Data Source Switching** - Switch between different data sources at runtime
 - **Extension Features** - Extend functionality through Groovy scripts

@@ -30,6 +30,17 @@ datasource:
         maximum-pool-size: 5
         minimum-idle: 2
 
+    # SQLite 示例数据源（无需用户名和密码）
+    sqlite_demo:
+      url: jdbc:sqlite:/data/alert_records.db
+      username: ''
+      password: ''
+      driver-class-name: org.sqlite.JDBC
+      hikari:
+        pool-name: SqliteDemoHikariCP
+        maximum-pool-size: 3
+        minimum-idle: 1
+
     # 可以添加更多数据源
     # third:
     #   url: jdbc:mysql://example.com:3306/db3

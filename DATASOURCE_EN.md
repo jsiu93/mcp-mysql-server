@@ -33,7 +33,7 @@ The data source configuration file uses YAML format with the following basic str
 
 ```yaml
 datasource:
-  datasources:
+datasources:
     # Data source configuration items
     datasource_name:
       url: jdbc:mysql://host:port/database
@@ -41,6 +41,7 @@ datasource:
       password: your_password
       default: true  # Optional, mark as default data source
 ```
+> Tip: SQLite URLs use the format `jdbc:sqlite:/path/to/database.db`. You can leave `username` and `password` empty and explicitly set `driver-class-name: org.sqlite.JDBC`.
 
 ## Configuration Parameters
 
@@ -51,6 +52,8 @@ datasource:
 | `url`      | String | JDBC connection string                   | `jdbc:mysql://localhost:3306/mydb`    |
 | `username` | String | Database username                        | `root`                                 |
 | `password` | String | Database password                        | `password123`                          |
+
+> SQLite data sources only require the `url`; credentials can remain empty strings.
 
 ### Optional Parameters
 
@@ -102,6 +105,20 @@ datasource:
       username: analytics_user
       password: analytics_password
 ```
+
+### SQLite Data Source Configuration
+
+```yaml
+datasource:
+  datasources:
+    sqlite_demo:
+      url: jdbc:sqlite:/opt/data/sqlite-demo.db
+      username: ''
+      password: ''
+      driver-class-name: org.sqlite.JDBC
+```
+
+SQLite stores data in a single file, so prefer absolute paths and ensure the running user has read/write permissions.
 
 ## Data Source Usage
 

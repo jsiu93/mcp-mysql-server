@@ -33,7 +33,7 @@ java -jar target/mcp-mysql-server-0.0.1-SNAPSHOT.jar --datasource.config=/path/t
 
 ```yaml
 datasource:
-  datasources:
+datasources:
     # 数据源配置项
     datasource_name:
       url: jdbc:mysql://host:port/database
@@ -41,6 +41,7 @@ datasource:
       password: your_password
       default: true  # 可选，标记为默认数据源
 ```
+> 提示：SQLite 数据库使用 `jdbc:sqlite:/path/to/database.db` 形式的 URL，可留空 `username`、`password`，并建议显式设置 `driver-class-name: org.sqlite.JDBC`。
 
 ## 配置参数详解
 
@@ -51,6 +52,8 @@ datasource:
 | `url`    | String | JDBC连接字符串                            | `jdbc:mysql://localhost:3306/mydb`     |
 | `username` | String | 数据库用户名                              | `root`                                  |
 | `password` | String | 数据库密码                               | `password123`                           |
+
+> SQLite 数据源只需提供 `url`，其余凭证可留空。
 
 ### 可选参数
 
@@ -102,6 +105,20 @@ datasource:
       username: analytics_user
       password: analytics_password
 ```
+
+### SQLite 数据源配置
+
+```yaml
+datasource:
+  datasources:
+    sqlite_demo:
+      url: jdbc:sqlite:/opt/data/sqlite-demo.db
+      username: ''
+      password: ''
+      driver-class-name: org.sqlite.JDBC
+```
+
+SQLite 数据库是文件级别存储，建议使用绝对路径并确保运行账号对该文件具有读写权限。
 
 ## 数据源使用
 
