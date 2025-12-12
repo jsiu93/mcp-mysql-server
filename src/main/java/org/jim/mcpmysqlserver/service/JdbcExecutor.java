@@ -13,8 +13,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.nio.charset.StandardCharsets;
+import org.apache.tsfile.utils.Binary;
 
 /**
  * JDBC执行器服务，负责处理所有JDBC相关操作
@@ -96,8 +99,8 @@ public class JdbcExecutor {
                                 try {
                                     // ResultSet is 1-indexed
                                     Object value = rs.getObject(i + 1);
-                                    // 处理数据库中的 NULL 值，避免 HashMap.merge() 的 null 限制
-                                    return value != null ? value : "NULL";
+                                    log.debug("Column {} -> {}", columnNames.get(i), value.getClass());
+                                    return normalizeValue(value);
                                 } catch (Exception e) {
                                     log.error("Error getting value for column {}: {}", columnNames.get(i), e.getMessage());
                                     throw new RuntimeException("Error processing ResultSet", e);
@@ -110,6 +113,35 @@ public class JdbcExecutor {
         }
 
         return resultList;
+    }
+
+    /**
+     * 统一处理特殊类型的值，例如 IoTDB 的 Binary。
+     */
+    private Object normalizeValue(Object value) {
+        if (value == null) {
+            return "NULL";
+        }
+
+        // IoTDB 1.x typically returns org.apache.tsfile.utils.Binary; some versions use org.apache.iotdb.tsfile.utils.Binary
+        if (value instanceof Binary tsBinary) {
+            return decodeBinary(tsBinary.getValues());
+        }
+        if (value instanceof org.apache.iotdb.tsfile.utils.Binary iotdbBinary) {
+            return decodeBinary(iotdbBinary.getValues());
+        }
+
+        return value;
+    }
+
+    private String decodeBinary(byte[] rawBytes) {
+        try {
+            log.debug("Decoding IoTDB Binary raw bytes: {}", rawBytes.length);
+            return new String(rawBytes, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.warn("Failed to decode IoTDB Binary to UTF-8 string: {}", e.getMessage());
+            return Base64.getEncoder().encodeToString(rawBytes);
+        }
     }
 
     /**
