@@ -99,7 +99,7 @@ public class JdbcExecutor {
                                 try {
                                     // ResultSet is 1-indexed
                                     Object value = rs.getObject(i + 1);
-                                    log.debug("Column {} -> {}", columnNames.get(i), value.getClass());
+                                    log.debug("Column {} -> {}", columnNames.get(i), value == null ? "null" : value.getClass());
                                     return normalizeValue(value);
                                 } catch (Exception e) {
                                     log.error("Error getting value for column {}: {}", columnNames.get(i), e.getMessage());
