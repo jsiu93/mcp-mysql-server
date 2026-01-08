@@ -12,13 +12,18 @@ import javax.script.ScriptEngineManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Objects;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 /**
@@ -139,37 +144,41 @@ public class GroovyService {
             log.info("Attempting dynamic loading for jarDirUrl: {}", resource);
 
             if (resource == null) {
-                log.warn("Dependency directory not found: {}", jarPathDir);
-                return null;
-            }
+                log.warn("依赖目录未找到: {}", jarPathDir);
+                jarUrls = extractJarDependenciesFromCodeSource(extensionName, jarPathDir);
+            } else {
+                String protocol = resource.getProtocol();
 
-            String protocol = resource.getProtocol();
+                if ("file".equals(protocol)) {
+                    log.info("Loading dependencies from file system for extension: {}", extensionName);
+                    File dependencyDir = new File(resource.toURI());
+                    if (!(dependencyDir.exists() && dependencyDir.isDirectory())) {
+                        log.warn("Dependency directory does not exist: {}", dependencyDir.getAbsolutePath());
+                        return null;
+                    }
 
-            if ("file".equals(protocol)) {
-                log.info("Loading dependencies from file system for extension: {}", extensionName);
-                File dependencyDir = new File(resource.toURI());
-                if (!(dependencyDir.exists() && dependencyDir.isDirectory())) {
-                    log.warn("Dependency directory does not exist: {}", dependencyDir.getAbsolutePath());
-                    return null;
-                }
+                    try (Stream<Path> walk = Files.walk(dependencyDir.toPath())) {
+                        jarUrls = walk.filter(Files::isRegularFile)
+                                .filter(p -> p.toString().endsWith(".jar"))
+                                .map(p -> {
+                                    try {
+                                        return p.toUri().toURL();
+                                    } catch (Exception e) {
+                                        log.error("Error converting JAR path to URL: {}", p, e);
+                                        return null;
+                                    }
+                                })
+                                .filter(Objects::nonNull)
+                                .toList();
 
-                try (Stream<Path> walk = Files.walk(dependencyDir.toPath())) {
-                    jarUrls = walk.filter(Files::isRegularFile)
-                            .filter(p -> p.toString().endsWith(".jar"))
-                            .map(p -> {
-                                try {
-                                    return p.toUri().toURL();
-                                } catch (Exception e) {
-                                    log.error("Error converting JAR path to URL: {}", p, e);
-                                    return null;
-                                }
-                            })
-                            .filter(Objects::nonNull)
-                            .toList();
-
-                    log.info("Found {} dependency JARs for extension: {}, files: {}",
-                            jarUrls.size(), extensionName,
-                            jarUrls.stream().map(URL::toString).toList());
+                        log.info("Found {} dependency JARs for extension: {}, files: {}",
+                                jarUrls.size(), extensionName,
+                                jarUrls.stream().map(URL::toString).toList());
+                    }
+                } else if ("jar".equals(protocol)) {
+                    jarUrls = extractJarDependenciesFromJarResource(resource, extensionName, jarPathDir);
+                } else {
+                    log.warn("不支持的资源协议: {}, 扩展={}", protocol, extensionName);
                 }
             }
 
@@ -203,6 +212,84 @@ public class GroovyService {
                 }
             }
         }
+    }
+
+    private List<URL> extractJarDependenciesFromJarResource(URL resource, String extensionName, String jarPathDir) {
+        try {
+            JarURLConnection connection = (JarURLConnection) resource.openConnection();
+            connection.setUseCaches(false);
+            try (JarFile jarFile = connection.getJarFile()) {
+                return extractJarDependenciesFromJarFile(jarFile, extensionName, jarPathDir);
+            }
+        } catch (Exception e) {
+            log.error("读取JAR依赖失败: 扩展={}, 错误={}", extensionName, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    private List<URL> extractJarDependenciesFromCodeSource(String extensionName, String jarPathDir) {
+        try {
+            URL codeSourceUrl = GroovyService.class.getProtectionDomain().getCodeSource().getLocation();
+            if (codeSourceUrl == null || !"file".equals(codeSourceUrl.getProtocol())) {
+                log.warn("无法定位JAR路径: 扩展={}", extensionName);
+                return new ArrayList<>();
+            }
+
+            Path codeSourcePath = Path.of(codeSourceUrl.toURI());
+            if (!Files.isRegularFile(codeSourcePath)) {
+                log.warn("JAR路径不是文件: {}, 扩展={}", codeSourcePath, extensionName);
+                return new ArrayList<>();
+            }
+
+            try (JarFile jarFile = new JarFile(codeSourcePath.toFile())) {
+                return extractJarDependenciesFromJarFile(jarFile, extensionName, jarPathDir);
+            }
+        } catch (Exception e) {
+            log.error("从JAR路径提取依赖失败: 扩展={}, 错误={}", extensionName, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    private List<URL> extractJarDependenciesFromJarFile(JarFile jarFile, String extensionName, String jarPathDir) throws IOException {
+        String normalizedPath = jarPathDir.endsWith("/") ? jarPathDir : jarPathDir + "/";
+        Path tempDir = Files.createTempDirectory("mcp-groovy-" + extensionName + "-");
+        tempDir.toFile().deleteOnExit();
+
+        List<URL> jarUrls = new ArrayList<>();
+        Enumeration<JarEntry> entries = jarFile.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            if (entry.isDirectory()) {
+                continue;
+            }
+
+            String name = entry.getName();
+            int index = name.indexOf(normalizedPath);
+            if (index < 0 || !name.endsWith(".jar")) {
+                continue;
+            }
+
+            String relativeName = name.substring(index + normalizedPath.length());
+            if (relativeName.isEmpty()) {
+                continue;
+            }
+
+            Path targetPath = tempDir.resolve(relativeName);
+            Path parent = targetPath.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            try (InputStream inputStream = jarFile.getInputStream(entry)) {
+                Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            targetPath.toFile().deleteOnExit();
+            jarUrls.add(targetPath.toUri().toURL());
+        }
+
+        log.info("从JAR提取依赖完成: 扩展={}, 数量={}", extensionName, jarUrls.size());
+        return jarUrls;
     }
 
     /**

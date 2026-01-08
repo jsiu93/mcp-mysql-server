@@ -64,9 +64,9 @@ public class DataSourceService {
         try {
             secondaryDataSources = applicationContext.getBean("secondaryDataSources", Map.class);
         } catch (Exception e) {
-            log.error("Failed to get secondaryDataSources bean: {}", e.getMessage());
-            log.warn("Datasource [{}] not found, using default datasource instead", name);
-            return getPrimaryDataSource();
+            log.error("未找到 secondaryDataSources Bean: {}", e.getMessage());
+            log.warn("数据源 [{}] 未找到，返回空", name);
+            return null;
         }
 
         // 从数据源集合中获取指定名称的数据源
@@ -76,9 +76,9 @@ public class DataSourceService {
             return dataSource;
         }
 
-        // 如果无法找到，返回默认数据源
-        log.warn("Datasource [{}] not found, using default datasource instead", name);
-        return getPrimaryDataSource();
+        // 如果无法找到，返回空
+        log.warn("数据源 [{}] 未配置，返回空", name);
+        return null;
     }
 
     /**

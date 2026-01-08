@@ -134,7 +134,7 @@ public class DataSourceController {
             result.put("result", sqlResult);
             log.info("SQL execution successful");
         } catch (Exception e) {
-            result.put("sxtatus", "error");
+            result.put("status", "error");
             result.put("message", e.getMessage());
             log.error("SQL execution failed: {}", e.getMessage(), e);
         }

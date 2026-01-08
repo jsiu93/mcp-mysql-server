@@ -1,96 +1,94 @@
 # MCP MySQL Server
 
-一个基于 Spring AI 的MCP，可执行任意 SQL。
+基于 Spring Boot 与 Spring AI MCP Server 的数据库工具服务，支持多数据源与多数据库类型。通过 MCP Tools + Resources 提供 SQL 执行与数据处理能力，默认启用 HTTP/Streamable 传输，支持可选 stdio 模式。
 
-[中文文档](README.md) | [English Documentation](README_EN.md)
+## 功能概览
 
-## 快速上手
+- 多数据源配置与动态切换（默认数据源 + 命名数据源）。
+- JDBC URL 自动识别数据库类型并设置驱动。
+- MCP Tools：`executeSql`、`executeSqlOnDefault`、`executeSqlWithDataSource`、`listDataSources`、`getAllExtensions`、`executeGroovyScript`。
+- MCP Resources：`mcp://datasources/config`、`mcp://database/tables`、`mcp://extensions/list`、`mcp://sql/templates`。
+- SQL 安全校验（可配置关键字拦截）。
 
-### 1. MCP JSON 配置
+## 运行环境
 
-#### 方式一：Maven Wrapper 启动
+- JDK 21
+- Maven（推荐使用 `./mvnw`）
 
-```json
-{
-  "mcpServers": {
-    "mcp-mysql-server": {
-      "command": "/Users/xin.y/IdeaProjects/mcp-mysql-server/mvnw",
-      "args": [
-        "-q",
-        "-f",
-        "/Users/xin.y/IdeaProjects/mcp-mysql-server/pom.xml",
-        "spring-boot:run"
-      ]
-    }
-  }
-}
-```
+## 数据源配置
 
-#### 方式二：JAR 包启动
-
-构建jar
+默认加载 `src/main/resources/datasource.yml`，可用命令行覆盖：
 
 ```bash
-./mvnw clean package
+java -jar target/mcp-mysql-server-*.jar --datasource.config=/path/to/datasource.yml
 ```
 
-配置MCP服务器
-
-```json
-{
-  "mcpServers": {
-    "mcp-mysql-server": {
-      "command": "java",
-      "args": [
-        "-Dloader.path=/Users/xin.y/IdeaProjects/mcp-mysql-server/src/main/resources/groovy",
-        "-jar",
-        "/Users/xin.y/IdeaProjects/mcp-mysql-server/target/mcp-mysql-server-0.0.1-SNAPSHOT.jar"
-      ]
-    }
-  }
-}
-```
-
-**注意：** `-Dloader.path` 参数为可选，仅在需要运行扩展功能时才需要指定。
-
-### 2. 数据源配置
-
-修改 `mcp-mysql-server/src/main/resources/datasource.yml` 文件：
+最小示例：
 
 ```yaml
 datasource:
   datasources:
-    your_db1_name:
-      url: jdbc:mysql://localhost:3306/db1
+    primary:
+      url: jdbc:mysql://localhost:3306/app
       username: root
-      password: password
-      default: true  # 标记为默认数据源
+      password: "password"
+      default: true
     sqlite_demo:
-      url: jdbc:sqlite:/opt/data/sqlite-demo.db
-      username: ''   # SQLite 可留空
-      password: ''
+      url: jdbc:sqlite:/data/demo.db
+      username: ""
+      password: ""
       driver-class-name: org.sqlite.JDBC
 ```
 
----
+## 启动方式
 
-## 功能特点
+开发运行：
 
-- **多数据库兼容** - 开箱即用支持 MySQL、PostgreSQL、SQLite、Oracle、SQL Server、H2、Apache IoTDB
-- **多数据源支持** - 配置和管理多个数据库数据源
-- **动态数据源切换** - 运行时动态切换不同的数据源
-- **扩展功能** - 通过 Groovy 脚本扩展功能
-- **SQL 安全控制** - 防止 AI 模型执行危险 SQL 操作
+```bash
+./mvnw spring-boot:run
+```
 
-## 详细文档
+打包运行：
 
-| 文档                            | 描述                    |
-|:------------------------------|:----------------------|
-| [扩展功能文档](EXTENSIONS.md)       | Groovy 脚本扩展的详细配置和开发指南 |
-| [数据源配置文档](DATASOURCE.md)      | 数据源的详细配置、多环境管理和最佳实践   |
-| [SQL 安全控制文档](SQL_SECURITY.md) | SQL 安全策略的配置和管理        |
+```bash
+./mvnw clean package
+java -jar target/mcp-mysql-server-*.jar
+```
 
-## 环境要求
+可选 stdio 模式（加载 `application-stdio.yml`）：
 
-- **JDK 21+**
-- **Maven 3.6+**
+```bash
+java -jar target/mcp-mysql-server-*.jar --spring.profiles.active=stdio
+```
+
+默认 HTTP MCP 入口：`http://localhost:6789/mcp`。stdio 配置默认端口为 `6788`（见 `application-stdio.yml`）。
+
+## Groovy 扩展
+
+扩展由 `src/main/resources/extension.yml` 注册，脚本与依赖位于：
+
+- 脚本：`src/main/resources/groovy/<extension>/script/`
+- 依赖：`src/main/resources/groovy/<extension>/dependency/`
+
+调用方式：先用 `getAllExtensions` 获取扩展，再用 `executeGroovyScript` 处理结果字段（如 Base64、加密字段、压缩数据）。
+
+## SQL 安全控制
+
+`sql.security.enabled` 与 `sql.security.dangerous-keywords` 位于 `application.yml`，示例参考：
+
+- `src/main/resources/sql-security-config-example.yml`
+
+## 调试接口（HTTP）
+
+用于本地调试与连通性检查：
+
+- `GET /api/datasource/list`
+- `GET /api/datasource/test?name=<datasource>`
+- `POST /api/datasource/execute?datasource=<name>&sql=...`
+- `GET /api/datasource/executeSqlOnDefault?sql=...`
+- `GET /api/datasource/executeGroovyScript?extensionName=...&input=...`
+
+## 运行说明
+
+- 日志输出到 `logs/mcp-server.log`。
+- 作为子进程运行时，父进程退出会触发服务自动关闭。
