@@ -55,27 +55,15 @@ public class MysqlOptionService {
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        this.executorService = Executors.newFixedThreadPool(5);
-        log.info("DatabaseOptionService initialized with DataSourceService, SqlSecurityValidator, JdbcExecutor and ExecutorService");
+        // Java 21 虚拟线程：I/O 密集型任务无需固定线程池，每个任务独立虚拟线程
+        this.executorService = Executors.newVirtualThreadPerTaskExecutor();
+        log.info("DatabaseOptionService 初始化完成，使用虚拟线程执行器");
     }
 
     @PreDestroy
     public void destroy() {
-        log.info("Shutting down ExecutorService");
-        executorService.shutdown();
-        try {
-            if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
-                log.warn("ExecutorService did not terminate gracefully, forcing shutdown");
-                executorService.shutdownNow();
-                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                    log.error("ExecutorService did not terminate after forced shutdown");
-                }
-            }
-        } catch (InterruptedException e) {
-            log.error("ExecutorService shutdown interrupted: {}", e.getMessage(), e);
-            executorService.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        log.info("关闭虚拟线程执行器");
+        executorService.close();
     }
 
 
@@ -281,16 +269,7 @@ public class MysqlOptionService {
             return objectMapper.valueToTree(emptyResult);
         }
 
-        // to JsonNode
-        try {
-            String o = objectMapper.writeValueAsString(stringObjectMap.get(defaultDataSourceName));
-            return objectMapper.readTree(o);
-        } catch (Exception e) {
-            log.error("Failed to parse SQL result as JSON: {}", e.getMessage(), e);
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("error", "Invalid JSON result from SQL query");
-            return objectMapper.valueToTree(errorResult);
-        }
+        return objectMapper.valueToTree(stringObjectMap.get(defaultDataSourceName));
     }
 
     private Map<String, Object> validateSqlAndGetErrorResult(String sql) {

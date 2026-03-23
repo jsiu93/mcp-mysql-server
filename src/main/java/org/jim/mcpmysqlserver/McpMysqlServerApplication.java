@@ -36,6 +36,16 @@ public class McpMysqlServerApplication {
      */
     private static final int DEFAULT_PORT = 9433;
 
+    // 各数据库类型的表结构查询模板，key 为小写数据库类型名
+    private static final Map<String, String> TABLE_QUERY_TEMPLATES = Map.of(
+            "postgresql", "SELECT table_name as TABLE_NAME, '' as TABLE_COMMENT, 0 as TABLE_ROWS, null as CREATE_TIME, null as UPDATE_TIME FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+            "oracle", "SELECT table_name as TABLE_NAME, '' as TABLE_COMMENT, num_rows as TABLE_ROWS, created as CREATE_TIME, last_analyzed as UPDATE_TIME FROM user_tables ORDER BY table_name",
+            "sql server", "SELECT TABLE_NAME, '' as TABLE_COMMENT, 0 as TABLE_ROWS, null as CREATE_TIME, null as UPDATE_TIME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME",
+            "h2", "SELECT TABLE_NAME, REMARKS as TABLE_COMMENT, 0 as TABLE_ROWS, null as CREATE_TIME, null as UPDATE_TIME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = SCHEMA() ORDER BY TABLE_NAME",
+            "sqlite", "SELECT name as TABLE_NAME, '' as TABLE_COMMENT, 0 as TABLE_ROWS, null as CREATE_TIME, null as UPDATE_TIME FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            "mysql", "SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS, CREATE_TIME, UPDATE_TIME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME"
+    );
+
     /**
      * 应用启动入口
      * @param args 命令行参数
@@ -166,73 +176,8 @@ public class McpMysqlServerApplication {
                         .findFirst()
                         .orElse("Unknown");
 
-                String tableQuery;
-
-                // 根据数据库类型选择合适的查询语句
-                switch (databaseType.toLowerCase()) {
-                    case "postgresql":
-                        tableQuery = "SELECT " +
-                                "table_name as TABLE_NAME, " +
-                                "'' as TABLE_COMMENT, " +
-                                "0 as TABLE_ROWS, " +
-                                "null as CREATE_TIME, " +
-                                "null as UPDATE_TIME " +
-                                "FROM information_schema.tables " +
-                                "WHERE table_schema = 'public' " +
-                                "ORDER BY table_name";
-                        break;
-                    case "oracle":
-                        tableQuery = "SELECT " +
-                                "table_name as TABLE_NAME, " +
-                                "'' as TABLE_COMMENT, " +
-                                "num_rows as TABLE_ROWS, " +
-                                "created as CREATE_TIME, " +
-                                "last_analyzed as UPDATE_TIME " +
-                                "FROM user_tables " +
-                                "ORDER BY table_name";
-                        break;
-                    case "sql server":
-                        tableQuery = "SELECT " +
-                                "TABLE_NAME, " +
-                                "'' as TABLE_COMMENT, " +
-                                "0 as TABLE_ROWS, " +
-                                "null as CREATE_TIME, " +
-                                "null as UPDATE_TIME " +
-                                "FROM INFORMATION_SCHEMA.TABLES " +
-                                "WHERE TABLE_TYPE = 'BASE TABLE' " +
-                                "ORDER BY TABLE_NAME";
-                        break;
-                    case "h2":
-                        tableQuery = "SELECT " +
-                                "TABLE_NAME, " +
-                                "REMARKS as TABLE_COMMENT, " +
-                                "0 as TABLE_ROWS, " +
-                                "null as CREATE_TIME, " +
-                                "null as UPDATE_TIME " +
-                                "FROM INFORMATION_SCHEMA.TABLES " +
-                                "WHERE TABLE_SCHEMA = SCHEMA() " +
-                                "ORDER BY TABLE_NAME";
-                        break;
-                    case "sqlite":
-                        tableQuery = "SELECT " +
-                                "name as TABLE_NAME, " +
-                                "'' as TABLE_COMMENT, " +
-                                "0 as TABLE_ROWS, " +
-                                "null as CREATE_TIME, " +
-                                "null as UPDATE_TIME " +
-                                "FROM sqlite_master " +
-                                "WHERE type = 'table' " +
-                                "AND name NOT LIKE 'sqlite_%' " +
-                                "ORDER BY name";
-                        break;
-                    case "mysql":
-                    default:
-                        tableQuery = "SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS, CREATE_TIME, UPDATE_TIME " +
-                                "FROM INFORMATION_SCHEMA.TABLES " +
-                                "WHERE TABLE_SCHEMA = DATABASE() " +
-                                "ORDER BY TABLE_NAME";
-                        break;
-                }
+                String tableQuery = TABLE_QUERY_TEMPLATES.getOrDefault(
+                        databaseType.toLowerCase(), TABLE_QUERY_TEMPLATES.get("mysql"));
 
                 Map<String, Object> tablesResult = mysqlOptionService.executeSqlWithDataSource(
                         defaultDataSourceName,

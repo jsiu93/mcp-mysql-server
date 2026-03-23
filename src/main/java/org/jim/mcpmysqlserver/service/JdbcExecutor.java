@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Base64;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.nio.charset.StandardCharsets;
 import org.apache.tsfile.utils.Binary;
@@ -92,23 +91,10 @@ public class JdbcExecutor {
         List<Map<String, Object>> resultList = new ArrayList<>();
 
         while (rs.next()) {
-            // 处理每一行数据
-            Map<String, Object> row = IntStream.range(0, columnCount)
-                    .boxed()
-                    .collect(Collectors.toMap(columnNames::get, i -> {
-                                try {
-                                    // ResultSet is 1-indexed
-                                    Object value = rs.getObject(i + 1);
-                                    log.debug("Column {} -> {}", columnNames.get(i), value == null ? "null" : value.getClass());
-                                    return normalizeValue(value);
-                                } catch (Exception e) {
-                                    log.error("Error getting value for column {}: {}", columnNames.get(i), e.getMessage());
-                                    throw new RuntimeException("Error processing ResultSet", e);
-                                }
-                            },
-                            (existing, replacement) -> existing,
-                            HashMap::new
-                    ));
+            Map<String, Object> row = new HashMap<>(columnCount);
+            for (int i = 0; i < columnCount; i++) {
+                row.put(columnNames.get(i), normalizeValue(rs.getObject(i + 1)));
+            }
             resultList.add(row);
         }
 
@@ -117,10 +103,11 @@ public class JdbcExecutor {
 
     /**
      * 统一处理特殊类型的值，例如 IoTDB 的 Binary。
+     * null 保持为 null，由 Jackson 序列化为 JSON null
      */
     private Object normalizeValue(Object value) {
         if (value == null) {
-            return "NULL";
+            return null;
         }
 
         // IoTDB 1.x typically returns org.apache.tsfile.utils.Binary; some versions use org.apache.iotdb.tsfile.utils.Binary

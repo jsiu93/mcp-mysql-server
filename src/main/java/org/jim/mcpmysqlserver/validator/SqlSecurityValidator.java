@@ -5,7 +5,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.jim.mcpmysqlserver.config.SqlSecurityConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * SQL安全验证器
@@ -17,9 +20,17 @@ import java.util.regex.Pattern;
 public class SqlSecurityValidator {
 
     private final SqlSecurityConfig sqlSecurityConfig;
+    // 启动时预编译所有关键字的正则，避免每次验证重复编译
+    private final Map<String, Pattern> keywordPatterns;
 
     public SqlSecurityValidator(SqlSecurityConfig sqlSecurityConfig) {
         this.sqlSecurityConfig = sqlSecurityConfig;
+        this.keywordPatterns = sqlSecurityConfig.getDangerousKeywords().stream()
+                .collect(Collectors.toMap(
+                        k -> k,
+                        k -> Pattern.compile("\\b" + Pattern.quote(k.toLowerCase()) + "\\b", Pattern.CASE_INSENSITIVE)
+                ));
+        log.info("SQL安全验证器初始化完成，预编译 {} 个关键字正则", keywordPatterns.size());
     }
 
     /**
@@ -43,9 +54,10 @@ public class SqlSecurityValidator {
         String cleanedSql = cleanSql(sql);
         log.debug("Validating SQL: {}", cleanedSql);
 
-        // 检查是否包含危险关键字
-        for (String keyword : sqlSecurityConfig.getDangerousKeywords()) {
-            if (containsDangerousKeyword(cleanedSql, keyword)) {
+        // 检查是否包含危险关键字（使用预编译正则）
+        for (Map.Entry<String, Pattern> entry : keywordPatterns.entrySet()) {
+            if (entry.getValue().matcher(cleanedSql).find()) {
+                String keyword = entry.getKey();
                 String errorMessage = String.format(
                         """
                         Dangerous SQL operation keyword '%s' detected. This operation has been blocked for data security.
@@ -86,25 +98,6 @@ public class SqlSecurityValidator {
         sql = sql.replaceAll("\\s+", " ").trim();
 
         return sql;
-    }
-
-    /**
-     * 检查SQL中是否包含指定的危险关键字
-     * @param sql 清理后的SQL语句
-     * @param keyword 危险关键字
-     * @return 是否包含危险关键字
-     */
-    private boolean containsDangerousKeyword(String sql, String keyword) {
-        if (StringUtils.isBlank(sql) || StringUtils.isBlank(keyword)) {
-            return false;
-        }
-
-        // 构建词边界正则表达式，确保匹配完整单词而不是子字符串
-        // 例如：避免在 "description" 中误匹配 "update"
-        String pattern = "\\b" + Pattern.quote(keyword.toLowerCase()) + "\\b";
-        Pattern compiledPattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-
-        return compiledPattern.matcher(sql.toLowerCase()).find();
     }
 
     /**
