@@ -34,3 +34,9 @@ build/
 
 ### Xcode ###
 .xcodemap/
+.ace-tool/
+
+### Local noise ###
+.DS_Store
+logs/
+.claude/
