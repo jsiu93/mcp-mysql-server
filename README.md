@@ -6,7 +6,7 @@
 
 - 多数据源配置与动态切换（默认数据源 + 命名数据源）。
 - JDBC URL 自动识别数据库类型并设置驱动。
-- MCP Tools：`executeSql`、`executeSqlOnDefault`、`executeSqlWithDataSource`、`fetchSqlResultPage`、`listDataSources`、`getAllExtensions`、`executeGroovyScript`。
+- MCP Tools：`executeSql`、`executeSqlOnDefault`、`executeSqlWithDataSource`、`fetchSqlResultPage`、`listDataSources`、`reloadDataSources`、`getAllExtensions`、`executeGroovyScript`。
 - MCP Resources：`mcp://datasources/config`、`mcp://database/tables`、`mcp://extensions/list`、`mcp://sql/templates`。
 - SQL 安全校验（可配置关键字拦截）。
 
@@ -93,6 +93,18 @@ tool:
     cache-ttl-minutes: 10
     min-preview-rows: 1
 ```
+
+## 数据源免重启重载
+
+改完 `datasource.yml` 不用重启服务，触发一次重载即可：
+
+```bash
+curl -X POST localhost:6789/api/datasource/reload
+```
+
+也可以在 MCP 会话中调用 `reloadDataSources` 工具。配置文件是唯一真相，因此**没有**新增/删除数据源的接口——新增就是往文件里加一段配置再重载。
+
+配置未变的数据源连接池不受影响；被移除的数据源会保留 `datasource.reload-grace-seconds`（默认 30 秒）让在途查询跑完再关闭；配置语法错误整体中止不改动任何数据源，单个数据库连不上则部分成功并在 `failed` 中报告。详见 `DATASOURCE.md`。
 
 ## 调试接口（HTTP）
 

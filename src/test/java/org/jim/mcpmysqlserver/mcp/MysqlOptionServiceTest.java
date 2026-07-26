@@ -1,14 +1,13 @@
 package org.jim.mcpmysqlserver.mcp;
 
-import org.jim.mcpmysqlserver.config.DataSourceConfig;
 import org.jim.mcpmysqlserver.config.SqlSecurityConfig;
 import org.jim.mcpmysqlserver.config.ToolResponseLimitConfig;
+import org.jim.mcpmysqlserver.service.DataSourceRegistry;
 import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.jim.mcpmysqlserver.service.JdbcExecutor;
 import org.jim.mcpmysqlserver.service.SqlResultCacheService;
 import org.jim.mcpmysqlserver.validator.SqlSecurityValidator;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.jdbc.datasource.AbstractDataSource;
 
 import javax.sql.DataSource;
@@ -167,7 +166,7 @@ class MysqlOptionServiceTest {
         private final DataSource dataSource = new NoopDataSource();
 
         private StubDataSourceService() {
-            super(new DataSourceConfig(), new StaticApplicationContext());
+            super(new DataSourceRegistry(0L));
         }
 
         @Override

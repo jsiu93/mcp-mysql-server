@@ -19,6 +19,17 @@
 - `java -jar target/mcp-mysql-server-*.jar --spring.profiles.active=stdio`: run in stdio mode (see `application-stdio.yml`).
 - `java -jar target/mcp-mysql-server-*.jar --datasource.config=/path/to/datasource.yml`: override datasource config at startup.
 - `java -jar target/mcp-mysql-server-*.jar --extension.config=/path/to/extension.yml`: override extension config at startup.
+- `curl -X POST localhost:6789/api/datasource/reload`: apply datasource config edits to the running server without restarting.
+
+## Runtime Datasource Reload
+
+Editing `datasource.yml` no longer requires a restart. Edit the file, then trigger a reload via `POST /api/datasource/reload` or the `reloadDataSources` MCP tool.
+
+- The config file is the single source of truth. There is deliberately no add/remove API — adding a datasource means editing the file, then reloading.
+- Datasources whose config is unchanged keep their existing connection pool untouched. Removed datasources keep serving in-flight queries for `datasource.reload-grace-seconds` (default 30) before their pool closes.
+- A malformed config file aborts the whole reload and changes nothing. A single unreachable database fails alone and is reported under `failed`, while the rest of the file still takes effect.
+- Reload cannot conjure a JDBC driver that is not in the jar. Only MySQL, PostgreSQL, SQLite, and Apache IoTDB drivers are bundled; adding any other database still requires a `pom.xml` change and a rebuild.
+- MCP tool schemas do not enumerate datasource names, so reloading never requires MCP clients to reconnect.
 
 ## Coding Style & Naming Conventions
 

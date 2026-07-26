@@ -135,6 +135,45 @@ When executing SQL queries, you can specify using a particular data source:
 - Use `executeSql` tool to execute on all data sources
 - Use `executeSqlOnDefault` tool to execute only on the default data source
 
+## Changing Data Sources Without a Restart
+
+Editing the configuration file no longer requires restarting the server. Edit `datasource.yml`, then trigger a reload:
+
+```bash
+curl -X POST localhost:6789/api/datasource/reload
+```
+
+Or call the `reloadDataSources` tool from an MCP session.
+
+**Behavior**
+
+- The configuration file is the single source of truth. There is deliberately **no** add/remove endpoint — adding a data source means adding a block to the file, then reloading.
+- Data sources whose configuration is unchanged keep their existing connection pool untouched; they are never rebuilt.
+- A removed data source keeps serving in-flight queries for a grace period before its pool closes. The grace period is controlled by `datasource.reload-grace-seconds` (default 30).
+- A malformed configuration file **aborts the entire reload** and changes nothing. A single unreachable database **fails alone**, is reported under `failed`, and the rest of the file still takes effect.
+- MCP tool schemas do not enumerate data source names, so a reload never requires MCP clients to reconnect.
+
+**Cases that still require a restart**
+
+- Adding a database driver not bundled in the current JAR (only MySQL, PostgreSQL, SQLite, and Apache IoTDB are bundled). This requires a `pom.xml` change and a rebuild.
+- Changing command-line arguments such as `--sql.security.enabled` or `--server.port`, which do not live in `datasource.yml`.
+
+**Example response**
+
+```json
+{
+  "configPath": "datasource.yml",
+  "success": true,
+  "added": ["db3"],
+  "updated": ["db1"],
+  "removed": ["db2"],
+  "unchanged": ["db4"],
+  "failed": {},
+  "defaultDataSource": "db1",
+  "datasources": ["db1", "db3", "db4"]
+}
+```
+
 ## MCP Configuration Integration
 
 ### MCP Configuration for Maven Wrapper Startup

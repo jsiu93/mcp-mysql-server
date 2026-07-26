@@ -135,6 +135,45 @@ SQLite 数据库是文件级别存储，建议使用绝对路径并确保运行�
 - 使用 `executeSql` 工具在所有数据源上执行
 - 使用 `executeSqlOnDefault` 工具仅在默认数据源上执行
 
+## 免重启修改数据源
+
+修改配置文件后无需重启服务。编辑 `datasource.yml`，然后触发重载：
+
+```bash
+curl -X POST localhost:6789/api/datasource/reload
+```
+
+或在 MCP 对话中调用 `reloadDataSources` 工具。
+
+**行为说明**
+
+- 配置文件是唯一真相。**没有**新增/删除数据源的接口——新增数据源就是在文件里加一段配置，然后重载。
+- 配置未变化的数据源，其连接池完全不受影响，不会被重建。
+- 被移除的数据源，其连接池会保留一段宽限期让在途查询跑完，之后才关闭。宽限期由 `datasource.reload-grace-seconds` 控制，默认 30 秒。
+- 配置文件语法错误时**整体中止**，一个数据源都不改动；单个数据库连不上则**部分成功**，该库进 `failed` 明细，其余配置照常生效。
+- MCP 工具的 schema 不枚举数据源名称，因此重载不需要 MCP 客户端重连。
+
+**仍需重启的情况**
+
+- 添加当前 JAR 未打包的数据库驱动（目前只内置 MySQL、PostgreSQL、SQLite、Apache IoTDB），需修改 `pom.xml` 并重新构建。
+- 修改 `--sql.security.enabled`、`--server.port` 等命令行参数，它们不在 `datasource.yml` 中。
+
+**返回示例**
+
+```json
+{
+  "configPath": "datasource.yml",
+  "success": true,
+  "added": ["db3"],
+  "updated": ["db1"],
+  "removed": ["db2"],
+  "unchanged": ["db4"],
+  "failed": {},
+  "defaultDataSource": "db1",
+  "datasources": ["db1", "db3", "db4"]
+}
+```
+
 ## MCP 配置集成
 
 ### Maven Wrapper 启动的 MCP 配置

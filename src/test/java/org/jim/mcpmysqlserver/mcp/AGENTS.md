@@ -1,6 +1,6 @@
 # Parent
 
-- `../../../../../../AGENTS.md`
+- `../../../../../../../AGENTS.md`
 
 # Members
 

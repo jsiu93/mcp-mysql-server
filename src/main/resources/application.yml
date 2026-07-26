@@ -20,6 +20,12 @@ spring:
 server:
   port: 6789
 
+# 数据源运行期配置
+datasource:
+  # 重载时摘除数据源后，延迟关闭其连接池的宽限秒数。
+  # HikariCP 的 close() 会强杀在途连接，留出宽限期让正在执行的查询跑完。设为 0 表示立即关闭。
+  reload-grace-seconds: 30
+
 # SQL安全控制配置
 sql:
   security:

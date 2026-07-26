@@ -1,145 +1,83 @@
 package org.jim.mcpmysqlserver.config;
 
-import com.zaxxer.hikari.HikariDataSource;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.jim.mcpmysqlserver.util.DatabaseTypeDetector;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.ConfigurationPropertyName;
-import org.springframework.boot.context.properties.source.ConfigurationPropertyNameAliases;
-import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.jim.mcpmysqlserver.service.DataSourceRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.util.CollectionUtils;
+import org.springframework.jdbc.datasource.DelegatingDataSource;
 
 import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- * 动态数据源配置
+ * [INPUT]: 依赖同包 DataSourceConfig 的启动期数据源配置，依赖 service/DataSourceRegistry 承载连接池，
+ *          依赖 Spring 的 DelegatingDataSource 做默认数据源代理。
+ * [OUTPUT]: 对外提供 dataSourceRegistry Bean 与 @Primary 的 primaryDataSource Bean。
+ * [POS]: config 包的数据源装配入口。重构后它只负责"接线"，连接池的创建与生命周期已全部下沉到 DataSourceRegistry。
+ *        原先的 secondaryDataSources Map Bean 已删除——注册表统一持有含默认库在内的全部数据源，不再区分主从两套容器。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
+ *
  * @author yangxin
  */
 @Configuration
 @Slf4j
 public class DynamicDataSourceConfig {
 
-    @Resource
-    private DataSourceConfig dataSourceConfig;
+    /**
+     * 建立数据源注册表并完成启动期引导。
+     *
+     * <p>destroyMethod 指向 shutdown，容器关闭时立即回收全部连接池。</p>
+     *
+     * @param dataSourceConfig 启动期配置
+     * @return 数据源注册表
+     */
+    @Bean(destroyMethod = "shutdown")
+    public DataSourceRegistry dataSourceRegistry(DataSourceConfig dataSourceConfig) {
+        DataSourceRegistry registry = new DataSourceRegistry(dataSourceConfig.getReloadGraceSeconds());
+        registry.bootstrap(dataSourceConfig.getDatasources(), dataSourceConfig.getDefaultDataSourceName());
+        return registry;
+    }
 
     /**
-     * 默认数据源
+     * 默认数据源。返回代理而非具体连接池，使默认数据源可以在运行期重载时切换。
+     *
+     * @param registry 数据源注册表
+     * @return @Primary 数据源代理
      */
     @Bean
     @Primary
-    public DataSource primaryDataSource() {
-        String defaultDsName = dataSourceConfig.getDefaultDataSourceName();
-        if (defaultDsName == null) {
-            throw new IllegalStateException("No datasource configured");
-        }
-
-        log.info("Initializing default datasource [{}] from custom configuration", defaultDsName);
-        Map<String, Object> dsProperties = dataSourceConfig.getDefaultDataSourceProperties();
-        return createDataSource(defaultDsName, dsProperties);
+    public DataSource primaryDataSource(DataSourceRegistry registry) {
+        log.info("注册 @Primary 数据源代理，实际目标由 DataSourceRegistry 在每次调用时解析");
+        return new RegistryBackedDataSource(registry);
     }
 
     /**
-     * 创建所有配置的非默认数据源并注入到Spring容器
-     * @return 数据源名称到数据源的映射
+     * 默认数据源代理：Bean 身份恒定，目标每次调用重新解析。
+     *
+     * <p>这是"默认数据源可热切换"的支点。若直接把某个 HikariDataSource 注册为 @Primary，
+     * 它就成了不可替换的单例，重载时既换不掉也关不得。</p>
      */
-    @Bean
-    public Map<String, DataSource> secondaryDataSources() {
-        Map<String, DataSource> dataSources = new HashMap<>();
-        String defaultDsName = dataSourceConfig.getDefaultDataSourceName();
+    static class RegistryBackedDataSource extends DelegatingDataSource {
 
-        // 遍历配置的数据源
-        for (Map.Entry<String, Map<String, Object>> entry : dataSourceConfig.getDatasources().entrySet()) {
-            String dsName = entry.getKey();
+        private final DataSourceRegistry registry;
 
-            // 跳过默认数据源，因为它已经由primaryDataSource()方法创建
-            if (dsName.equals(defaultDsName)) {
-                continue;
-            }
-
-            Map<String, Object> dsProperties = entry.getValue();
-            try {
-                log.info("Initializing configured datasource: {}", dsName);
-                DataSource ds = createDataSource(dsName, dsProperties);
-                dataSources.put(dsName, ds);
-                log.info("Datasource [{}] initialized successfully", dsName);
-            } catch (Exception e) {
-                log.error("Failed to initialize datasource [{}]: {}", dsName, e.getMessage(), e);
-            }
+        RegistryBackedDataSource(DataSourceRegistry registry) {
+            this.registry = registry;
         }
 
-        return dataSources;
-    }
-
-    /**
-     * 根据配置创建数据源
-     * @param dsName 数据源名称
-     * @param dsProperties 数据源属性
-     * @return 数据源
-     */
-    private DataSource createDataSource(String dsName, Map<String, Object> dsProperties) {
-        try {
-            if (CollectionUtils.isEmpty(dsProperties)) {
-                log.warn("No properties provided for datasource {}", dsName);
-                return null;
+        @Override
+        public DataSource getTargetDataSource() {
+            DataSource target = registry.getDefaultDataSource();
+            if (target == null) {
+                throw new IllegalStateException("当前没有可用的默认数据源");
             }
+            return target;
+        }
 
-            // 设置默认驱动类名，如果用户没有配置
-            if (!dsProperties.containsKey("driver-class-name")) {
-                String url = (String) dsProperties.get("url");
-                String driverClassName = DatabaseTypeDetector.getDriverClassName(url);
-                String dbType = DatabaseTypeDetector.getDatabaseDisplayName(url);
-                dsProperties.put("driver-class-name", driverClassName);
-                log.info("为数据源 [{}] 自动检测到数据库类型: {}，使用驱动: {}", dsName, dbType, driverClassName);
-            }
-
-            // 创建数据源属性
-            DataSourceProperties dataSourceProperties = new DataSourceProperties();
-            ConfigurationPropertySource source = new MapConfigurationPropertySource(dsProperties);
-            ConfigurationPropertyNameAliases aliases = new ConfigurationPropertyNameAliases();
-            aliases.addAliases("url", "jdbc-url");
-            aliases.addAliases("username", "user");
-            Binder binder = new Binder(source.withAliases(aliases));
-
-            // 绑定基本属性
-            binder.bind(ConfigurationPropertyName.EMPTY, Bindable.ofInstance(dataSourceProperties));
-
-            // 创建HikariDataSource
-            HikariDataSource dataSource = dataSourceProperties.initializeDataSourceBuilder()
-                    .type(HikariDataSource.class)
-                    .build();
-
-            // 设置默认的Hikari配置（优化后的默认值）
-            dataSource.setMaximumPoolSize(10);
-            dataSource.setMinimumIdle(3);
-            dataSource.setIdleTimeout(300000); // 默认5分钟
-            dataSource.setConnectionTimeout(10000); // 默认10秒
-            dataSource.setMaxLifetime(1800000); // 默认30分钟
-            dataSource.setPoolName(dsName + "-HikariCP");
-
-            // 绑定Hikari特定属性，如果用户配置了则覆盖默认值
-            Map<String, Object> hikariProperties = (Map<String, Object>) dsProperties.get("hikari");
-            if (!CollectionUtils.isEmpty(hikariProperties)) {
-                ConfigurationPropertySource hikariSource = new MapConfigurationPropertySource(hikariProperties);
-                Binder hikariBinder = new Binder(hikariSource);
-                hikariBinder.bind(ConfigurationPropertyName.EMPTY, Bindable.ofInstance(dataSource));
-            }
-
-            log.info("Datasource [{}] created successfully", dsName);
-            return dataSource;
-        } catch (Exception e) {
-            log.error("Failed to create datasource [{}]: {}", dsName, e.getMessage(), e);
-            throw e;
+        @Override
+        public void afterPropertiesSet() {
+            // 目标按调用解析，刻意不在初始化期强制校验：
+            // 启动时数据库不可达不应导致容器启动失败，这与重构前的惰性行为一致
         }
     }
-
-
 }

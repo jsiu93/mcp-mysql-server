@@ -1,6 +1,7 @@
 package org.jim.mcpmysqlserver.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jim.mcpmysqlserver.config.DataSourceReloadService;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据源控制器，提供测试接口
+ * [INPUT]: 依赖 service/DataSourceService 的数据源元信息、mcp/MysqlOptionService 的 SQL 执行、
+ *          config/DataSourceReloadService 的配置重载能力。
+ * [OUTPUT]: 对外提供 /api/datasource 下的 list/test/execute/reload/executeGroovyScript/executeSqlOnDefault HTTP 接口。
+ * [POS]: controller 包的唯一入口，是 MCP 协议之外的旁路操作面，供 curl 与脚本使用。
+ *        与 mcp/DataSourceAdminTools 暴露同一套重载能力，两者共用 DataSourceReloadService，不得各自实现。
+ *        注意：本控制器无鉴权，服务默认绑定 0.0.0.0，部署时应以 server.address 收敛到回环地址。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
+ *
+ * <p>数据源控制器，提供测试接口。</p>
+ *
  * @author yangxin
  */
 @RestController
@@ -26,11 +36,25 @@ public class DataSourceController {
 
     private final DataSourceService dataSourceService;
     private final MysqlOptionService mysqlOptionService;
+    private final DataSourceReloadService dataSourceReloadService;
 
     @Autowired
-    public DataSourceController(DataSourceService dataSourceService, MysqlOptionService mysqlOptionService) {
+    public DataSourceController(DataSourceService dataSourceService,
+                                MysqlOptionService mysqlOptionService,
+                                DataSourceReloadService dataSourceReloadService) {
         this.dataSourceService = dataSourceService;
         this.mysqlOptionService = mysqlOptionService;
+        this.dataSourceReloadService = dataSourceReloadService;
+    }
+
+    /**
+     * 重新加载数据源配置文件，使新增/删除/修改的数据库连接免重启生效
+     * @return 逐库分类的重载报告
+     */
+    @PostMapping("/reload")
+    public ResponseEntity<Map<String, Object>> reload() {
+        log.info("Reloading datasource configuration from disk");
+        return ResponseEntity.ok(dataSourceReloadService.reload());
     }
 
 

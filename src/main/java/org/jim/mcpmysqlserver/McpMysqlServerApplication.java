@@ -7,6 +7,7 @@ import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.jim.mcpmysqlserver.config.extension.Extension;
 import org.jim.mcpmysqlserver.config.extension.GroovyService;
+import org.jim.mcpmysqlserver.mcp.DataSourceAdminTools;
 import org.jim.mcpmysqlserver.mcp.MysqlOptionService;
 import org.jim.mcpmysqlserver.service.DataSourceService;
 import org.jim.mcpmysqlserver.util.PortUtils;
@@ -99,10 +100,16 @@ public class McpMysqlServerApplication {
     }
 
 
+    /**
+     * 注册 MCP tool。工具对象按职责拆分：MysqlOptionService 负责 SQL 执行，DataSourceAdminTools 负责数据源拓扑管理。
+     *
+     * <p>注意：数据源名称是 tool 的入参而非 tool 名，因此运行期增删数据源不改变 tool schema，MCP 客户端无需重连。</p>
+     */
     @Bean
-    public ToolCallbackProvider databaseToolCallbackProvider(MysqlOptionService mysqlOptionService) {
+    public ToolCallbackProvider databaseToolCallbackProvider(MysqlOptionService mysqlOptionService,
+                                                             DataSourceAdminTools dataSourceAdminTools) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(mysqlOptionService)
+                .toolObjects(mysqlOptionService, dataSourceAdminTools)
                 .build();
     }
 
