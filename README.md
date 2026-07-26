@@ -6,7 +6,7 @@
 
 - 多数据源配置与动态切换（默认数据源 + 命名数据源）。
 - JDBC URL 自动识别数据库类型并设置驱动。
-- MCP Tools：`executeSql`、`executeSqlOnDefault`、`executeSqlWithDataSource`、`listDataSources`、`getAllExtensions`、`executeGroovyScript`。
+- MCP Tools：`executeSql`、`executeSqlOnDefault`、`executeSqlWithDataSource`、`fetchSqlResultPage`、`listDataSources`、`getAllExtensions`、`executeGroovyScript`。
 - MCP Resources：`mcp://datasources/config`、`mcp://database/tables`、`mcp://extensions/list`、`mcp://sql/templates`。
 - SQL 安全校验（可配置关键字拦截）。
 
@@ -77,6 +77,22 @@ java -jar target/mcp-mysql-server-*.jar --spring.profiles.active=stdio
 `sql.security.enabled` 与 `sql.security.dangerous-keywords` 位于 `application.yml`，示例参考：
 
 - `src/main/resources/sql-security-config-example.yml`
+
+## 大结果截断与续取
+
+SQL 结果超过 `tool.response-limit.max-chars` 时，tool 不再直接返回完整结果，而是返回带 `resultId` 的预览结构。调用方可以继续使用 `fetchSqlResultPage` 读取后续窗口。
+
+默认配置位于 `application.yml` 与 `application-stdio.yml`：
+
+```yaml
+tool:
+  response-limit:
+    enabled: true
+    max-chars: 12000
+    cache-max-entries: 100
+    cache-ttl-minutes: 10
+    min-preview-rows: 1
+```
 
 ## 调试接口（HTTP）
 

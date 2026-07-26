@@ -5,20 +5,23 @@ spring:
         name: mcp-database-server
         version: 1.0.0
         protocol: STREAMABLE
-        stdio: false
-        type: SYNC
+        webflux: false
+#          enabled: false  # Explicitly disable default WebFlux transport
+        stdio: true
+        type: sync
+#        keep-alive-interval: 30s
         streamable-http:
-          mcp-endpoint: /mcp
 #          keep-alive-interval: 30s
+          mcp-endpoint: /mcp
 
 
   application:
     name: mcp-database-server
   main:
-    banner-mode: console
+    banner-mode: off
     allow-bean-definition-overriding: true
 server:
-  port: 6789
+  port: 6788
 
 # SQL安全控制配置
 sql:
@@ -67,10 +70,10 @@ logging:
   file:
     name: logs/mcp-server.log
   level:
-    root: INFO
-    org.jim: INFO
-    org.springframework: INFO
-    com.zaxxer.hikari: INFO
+    root: off
+#    org.jim: INFO
+#    org.springframework: INFO
+#    com.zaxxer.hikari: INFO
 #    io.modelcontextprotocol.util.KeepAliveScheduler: ERROR
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,45 @@
+# 示例扩展配置文件
+# 用户可以复制此文件并根据需要修改，然后通过命令行参数指定：
+# java -jar mcp-mysql-server-0.0.1-SNAPSHOT.jar --extension.config=/path/to/your-extension.yml
+
+# 扩展功能配置
+extensions:
+  # IoTDB Base64解码扩展
+  - name: iotdbBase64Decoder
+    description: "IoTDB查询结果Base64解码工具，专门用于解码IoTDB查询返回的base64编码字段数据"
+    prompt: "解码IoTDB查询结果中的Base64编码字段。输入应为IoTDB查询的完整JSON响应，工具会自动识别并解码其中包含base64数据的字段（如Timeseries、Database、DataType等），返回包含原始base64值和解码后可读文本的详细结果"
+    enabled: true
+    mainFileName: main.groovy
+
+  # 通用Base64解码扩展
+  - name: base64Decoder
+    description: "通用Base64解码工具，用于解码任意Base64编码的字符串"
+    prompt: "解码Base64编码的字符串。输入应为Base64编码的字符串，工具会将其解码为原始文本并返回结果。支持标准Base64编码格式"
+    enabled: true
+    mainFileName: main.groovy
+
+  # AES解密扩展
+  - name: aesDecrypt
+    description: "AES解密工具，用于解密AES加密的数据字段"
+    prompt: "使用AES算法解密加密的数据。输入应为十六进制编码的AES加密字符串或包含多个加密字符串的JSON数组。工具会使用配置的密钥和算法实例进行解密，返回包含原始加密值和解密后明文的详细结果。支持AES-128/192/256，匹配客户端加密实现"
+    enabled: true
+    mainFileName: main.groovy
+    config:
+      aesKey: "your-32-byte-aes-key-goes-here!!"
+      aesInstance: "AES/ECB/PKCS5Padding"
+
+  # 可以添加更多扩展
+  # - name: customExtension
+  #   description: "自定义扩展功能"
+  #   prompt: "自定义扩展的提示词"
+  #   enabled: true
+  #   mainFileName: main.groovy
+  #   config:
+  #     customParam1: "value1"
+  #     customParam2: "value2"
+
+  # 禁用的扩展示例
+  # - name: disabledExtension
+  #   description: "已禁用的扩展"
+  #   enabled: false
+  #   mainFileName: main.groovy
